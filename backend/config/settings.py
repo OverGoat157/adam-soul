@@ -144,6 +144,9 @@ SITE_URL = os.environ.get('SITE_URL', '')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Allow large XML uploads from 1C (default is 2.5 MB which is too small)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100 MB
+
 # 1С Integration settings (legacy pull mode)
 COMMERCE_ML_URL = os.environ.get('COMMERCE_ML_URL', '')
 COMMERCE_ML_USER = os.environ.get('COMMERCE_ML_USER', '')
