@@ -35,6 +35,18 @@ read -p "Нажмите Enter для продолжения..."
 # ---------- 1. Системные пакеты ----------
 echo ""
 echo "[1/8] Установка системных пакетов..."
+
+# Исправляем зеркало apt — заменяем кастомные зеркала на официальные Ubuntu
+# (на Timeweb Cloud mirror.timeweb.ru может не резолвиться)
+if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+    # Ubuntu 24.04+ (DEB822 format)
+    sed -i 's|http://mirror\.timeweb\.ru/ubuntu|http://archive.ubuntu.com/ubuntu|g' \
+        /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+elif [ -f /etc/apt/sources.list ]; then
+    sed -i 's|http://mirror\.timeweb\.ru/ubuntu|http://archive.ubuntu.com/ubuntu|g' \
+        /etc/apt/sources.list 2>/dev/null || true
+fi
+
 apt-get update -qq
 apt-get install -y -qq \
     python3 python3-venv python3-dev python3-pip \
