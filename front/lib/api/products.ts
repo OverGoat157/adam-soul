@@ -1,5 +1,7 @@
 // front/lib/api/products.ts
 
+// In production: NEXT_PUBLIC_API_URL=/api (Vercel rewrites proxy to VPS)
+// In development: NEXT_PUBLIC_API_URL=http://localhost:8000/api
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
 export interface Product {
