@@ -180,11 +180,9 @@ def handle_import(request):
         tree = ET.parse(file_path)
         root = tree.getroot()
 
-        # Determine the site base URL for constructing image URLs
-        site_url = getattr(settings, 'SITE_URL', '')
-        if not site_url:
-            site_url = request.build_absolute_uri('/').rstrip('/')
-        media_url_prefix = f"{site_url}{settings.MEDIA_URL}1c_images/"
+        # Use relative URLs so images load through Vercel's /media/ rewrite
+        # (avoids mixed content: HTTPS page → HTTP VPS)
+        media_url_prefix = f"{settings.MEDIA_URL}1c_images/"
 
         if 'import' in safe_filename.lower():
             # import.xml contains categories and products

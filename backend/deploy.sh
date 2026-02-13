@@ -131,7 +131,7 @@ EnvironmentFile=${APP_DIR}/backend/.env
 ExecStart=${APP_DIR}/backend/venv/bin/gunicorn config.wsgi \
     --bind 127.0.0.1:8000 \
     --workers 2 \
-    --timeout 120 \
+    --timeout 300 \
     --access-logfile /var/log/adamsoul/access.log \
     --error-logfile /var/log/adamsoul/error.log
 Restart=on-failure
