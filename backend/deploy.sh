@@ -214,6 +214,7 @@ echo ""
 # ---------- Скрипт обновления ----------
 cat > "$APP_DIR/backend/update.sh" << 'UPDATEEOF'
 #!/bin/bash
+git config --global --add safe.directory /var/www/adamsoul 2>/dev/null || true
 cd /var/www/adamsoul
 git pull origin main
 cd backend
