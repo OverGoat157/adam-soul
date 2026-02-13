@@ -1,4 +1,5 @@
 # backend/catalog/models.py
+from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 
@@ -27,7 +28,7 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     name = models.CharField(max_length=500, verbose_name="Название")
     article = models.CharField(max_length=100, verbose_name="Артикул")
-    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Цена")
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Цена")
     description = models.TextField(blank=True, verbose_name="Описание")
     main_image = models.URLField(max_length=1000, blank=True)
     total_stock = models.IntegerField(default=0, verbose_name="Общий остаток")

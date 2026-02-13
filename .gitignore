@@ -3,3 +3,11 @@ node_modules
 .DS_Store
 *.log
 .env*.local
+
+# Backend
+backend/db.sqlite3
+backend/media/
+backend/staticfiles/
+__pycache__
+*.pyc
+.vercel
