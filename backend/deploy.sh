@@ -36,12 +36,18 @@ read -p "Нажмите Enter для продолжения..."
 echo ""
 echo "[1/8] Установка системных пакетов..."
 apt-get update -qq
+apt-get install -y -qq software-properties-common curl
+
+# Добавляем PPA с Python 3.11 (нужен для Ubuntu 20.04/22.04 без него)
+add-apt-repository -y ppa:deadsnakes/ppa
+apt-get update -qq
+
 apt-get install -y -qq \
-    python3.11 python3.11-venv python3-pip \
+    python3.11 python3.11-venv python3.11-dev python3-pip \
     postgresql postgresql-contrib \
     nginx \
-    git curl \
-    libpq-dev python3.11-dev \
+    git \
+    libpq-dev \
     certbot python3-certbot-nginx
 
 # ---------- 2. PostgreSQL ----------
