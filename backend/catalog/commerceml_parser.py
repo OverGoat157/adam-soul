@@ -122,7 +122,7 @@ def sync_products_from_tree(root, image_url_prefix=''):
                 continue
 
             description_elem = prod.find(t('Описание'))
-            description = description_elem.text if description_elem is not None else ''
+            description = (description_elem.text or '') if description_elem is not None else ''
 
             product, created = Product.objects.update_or_create(
                 id_1c=id_1c,
