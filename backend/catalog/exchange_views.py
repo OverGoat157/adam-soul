@@ -137,9 +137,22 @@ def handle_file(request):
 
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
 
-    # Write file content from request body
+    # Stream directly from wsgi.input to bypass DATA_UPLOAD_MAX_MEMORY_SIZE
+    content_length = int(request.META.get('CONTENT_LENGTH', 0) or 0)
+    wsgi_input = request.META.get('wsgi.input')
+
     with open(dest_path, 'wb') as f:
-        f.write(request.body)
+        if wsgi_input and content_length:
+            remaining = content_length
+            while remaining > 0:
+                chunk = wsgi_input.read(min(65536, remaining))
+                if not chunk:
+                    break
+                f.write(chunk)
+                remaining -= len(chunk)
+        else:
+            # fallback (small files or no content-length)
+            f.write(request.body)
 
     file_size = os.path.getsize(dest_path)
     logger.info(f"1C exchange: received file {safe_filename} ({file_size} bytes)")
