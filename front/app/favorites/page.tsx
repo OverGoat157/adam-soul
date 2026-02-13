@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Heart, ArrowLeft } from "lucide-react"
 import { useFavorites } from "@/contexts/favorites-context"
 import { useAuth } from "@/contexts/auth-context"
-import { mockProducts } from "@/lib/mock-data"
+import { getProducts } from "@/lib/api/products"
 import type { Product } from "@/lib/api/products"
 import { Header } from "@/components/header"
 import { ProductCard } from "@/components/product-card"
@@ -14,10 +14,15 @@ import { ProductModal } from "@/components/product-modal"
 export default function FavoritesPage() {
   const { favorites } = useFavorites()
   const { isLoading } = useAuth()
+  const [allProducts, setAllProducts] = useState<Product[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const favoriteProducts = mockProducts.filter(p => favorites.includes(p.id.toString()))
+  useEffect(() => {
+    getProducts().then(setAllProducts).catch(() => setAllProducts([]))
+  }, [])
+
+  const favoriteProducts = allProducts.filter(p => favorites.includes(p.id.toString()))
 
   if (isLoading) {
     return (
