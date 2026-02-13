@@ -9,34 +9,51 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-NS = 'urn:1C.ru:commerceml_2'
+def _detect_ns(root):
+    """Detect namespace from root element tag (e.g. urn:1C.ru:commerceml_21)."""
+    tag = root.tag
+    if tag.startswith('{'):
+        return tag[1:tag.index('}')]
+    return ''
 
 
-def _tag(name):
-    """Helper: return namespaced tag."""
-    return f'{{{NS}}}{name}'
+def _make_tag(ns, name):
+    """Return namespaced tag string, or plain name if no namespace."""
+    if ns:
+        return f'{{{ns}}}{name}'
+    return name
 
 
 # ============================================================
 # Standalone parsing functions (used by both pull and push)
 # ============================================================
 
-def sync_categories_from_tree(tree):
+def sync_categories_from_tree(root):
     """
     Sync categories from a parsed XML ElementTree root.
     Returns count of categories synced.
     """
+    ns = _detect_ns(root)
+    logger.info(f"XML namespace: '{ns}'")
+
+    def t(name):
+        return _make_tag(ns, name)
+
     count = 0
-    groups = tree.findall(f'.//{_tag("Группа")}')
+    groups = root.findall(f'.//{t("Группа")}')
     logger.info(f"Найдено {len(groups)} категорий")
 
     for group in groups:
         try:
-            id_1c = group.find(_tag('Ид')).text
-            name = group.find(_tag('Наименование')).text
+            id_elem = group.find(t('Ид'))
+            name_elem = group.find(t('Наименование'))
+            if id_elem is None or name_elem is None:
+                continue
+            id_1c = id_elem.text
+            name = name_elem.text
 
             parent_id = None
-            parent_elem = group.find(f'{_tag("Группы")}/{_tag("Ид")}')
+            parent_elem = group.find(f'{t("Группы")}/{t("Ид")}')
             if parent_elem is not None:
                 try:
                     parent = Category.objects.get(id_1c=parent_elem.text)
@@ -62,7 +79,7 @@ def sync_categories_from_tree(tree):
     return count
 
 
-def sync_products_from_tree(tree, image_url_prefix=''):
+def sync_products_from_tree(root, image_url_prefix=''):
     """
     Sync products from a parsed XML ElementTree root.
 
@@ -72,19 +89,28 @@ def sync_products_from_tree(tree, image_url_prefix=''):
 
     Returns count of products synced.
     """
+    ns = _detect_ns(root)
+
+    def t(name):
+        return _make_tag(ns, name)
+
     count = 0
-    products = tree.findall(f'.//{_tag("Товар")}')
+    products = root.findall(f'.//{t("Товар")}')
     logger.info(f"Найдено {len(products)} товаров")
 
     for prod in products:
         try:
-            id_1c = prod.find(_tag('Ид')).text
-            name = prod.find(_tag('Наименование')).text
+            id_elem = prod.find(t('Ид'))
+            name_elem = prod.find(t('Наименование'))
+            if id_elem is None or name_elem is None:
+                continue
+            id_1c = id_elem.text
+            name = name_elem.text
 
-            article_elem = prod.find(_tag('Артикул'))
+            article_elem = prod.find(t('Артикул'))
             article = article_elem.text if article_elem is not None else id_1c[:10]
 
-            category_id_elem = prod.find(f'{_tag("Группы")}/{_tag("Ид")}')
+            category_id_elem = prod.find(f'{t("Группы")}/{t("Ид")}')
             if category_id_elem is None:
                 logger.warning(f"Товар {name} без категории, пропускаем")
                 continue
@@ -95,7 +121,7 @@ def sync_products_from_tree(tree, image_url_prefix=''):
                 logger.warning(f"Категория не найдена для товара {name}")
                 continue
 
-            description_elem = prod.find(_tag('Описание'))
+            description_elem = prod.find(t('Описание'))
             description = description_elem.text if description_elem is not None else ''
 
             product, created = Product.objects.update_or_create(
@@ -111,7 +137,7 @@ def sync_products_from_tree(tree, image_url_prefix=''):
             )
 
             # Images
-            images = prod.findall(_tag('Картинка'))
+            images = prod.findall(t('Картинка'))
             if images:
                 ProductImage.objects.filter(product=product, is_from_1c=True).delete()
 
@@ -137,13 +163,13 @@ def sync_products_from_tree(tree, image_url_prefix=''):
 
             # Characteristics (sizes)
             characteristics = prod.findall(
-                f'{_tag("ХарактеристикиТовара")}/{_tag("ХарактеристикаТовара")}'
+                f'{t("ХарактеристикиТовара")}/{t("ХарактеристикаТовара")}'
             )
             for char in characteristics:
-                name_elem = char.find(_tag('Наименование'))
-                value_elem = char.find(_tag('Значение'))
+                name_elem = char.find(t('Наименование'))
+                value_elem = char.find(t('Значение'))
                 if name_elem is not None and value_elem is not None:
-                    if name_elem.text.lower() in ['размер', 'size']:
+                    if name_elem.text and name_elem.text.lower() in ['размер', 'size']:
                         ProductSize.objects.get_or_create(
                             product=product,
                             size=value_elem.text
@@ -158,16 +184,21 @@ def sync_products_from_tree(tree, image_url_prefix=''):
     return count
 
 
-def sync_offers_from_tree(tree):
+def sync_offers_from_tree(root):
     """
     Sync prices and stock from a parsed XML ElementTree root.
     """
-    offers = tree.findall(f'.//{_tag("Предложение")}')
+    ns = _detect_ns(root)
+
+    def t(name):
+        return _make_tag(ns, name)
+
+    offers = root.findall(f'.//{t("Предложение")}')
     logger.info(f"Найдено {len(offers)} предложений")
 
     for offer in offers:
         try:
-            id_elem = offer.find(_tag('Ид'))
+            id_elem = offer.find(t('Ид'))
             if id_elem is None:
                 continue
 
@@ -181,7 +212,7 @@ def sync_offers_from_tree(tree):
 
             # Price
             price_elem = offer.find(
-                f'{_tag("Цены")}/{_tag("Цена")}/{_tag("ЦенаЗаЕдиницу")}'
+                f'{t("Цены")}/{t("Цена")}/{t("ЦенаЗаЕдиницу")}'
             )
             if price_elem is not None:
                 try:
@@ -190,7 +221,7 @@ def sync_offers_from_tree(tree):
                     pass
 
             # Stock
-            stock_elem = offer.find(_tag('Количество'))
+            stock_elem = offer.find(t('Количество'))
             if stock_elem is not None:
                 try:
                     stock = int(float(stock_elem.text))
@@ -198,15 +229,15 @@ def sync_offers_from_tree(tree):
                     if '#' in offer_id:
                         # Offer with characteristic (size variant)
                         char_elems = offer.findall(
-                            f'{_tag("ХарактеристикиТовара")}/{_tag("ХарактеристикаТовара")}'
+                            f'{t("ХарактеристикиТовара")}/{t("ХарактеристикаТовара")}'
                         )
                         size_value = None
                         for char in char_elems:
-                            name_elem = char.find(_tag('Наименование'))
-                            value_elem = char.find(_tag('Значение'))
-                            if name_elem is not None and value_elem is not None:
-                                if name_elem.text.lower() in ['размер', 'size']:
-                                    size_value = value_elem.text
+                            char_name = char.find(t('Наименование'))
+                            char_value = char.find(t('Значение'))
+                            if char_name is not None and char_value is not None:
+                                if char_name.text and char_name.text.lower() in ['размер', 'size']:
+                                    size_value = char_value.text
                                     break
 
                         if size_value:
