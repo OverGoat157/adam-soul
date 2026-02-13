@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const VPS = "http://5.129.221.75";
 
 const nextConfig: NextConfig = {
+  trailingSlash: true,
   images: {
     remotePatterns: [
       {
