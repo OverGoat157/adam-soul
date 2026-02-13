@@ -49,7 +49,7 @@ export interface SyncLog {
 // Получить все категории
 export async function getCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${API_URL}/categories/`, {
+    const res = await fetch(`${API_URL}/categories`, {
       next: { revalidate: 900 }
     })
     if (!res.ok) return []
@@ -71,7 +71,8 @@ export async function getProducts(category: string = 'all', collection?: string)
     if (category !== 'all') params.append('category', category)
     if (collection) params.append('collection', collection)
 
-    const res = await fetch(`${API_URL}/products/?${params.toString()}`, {
+    const query = params.toString()
+    const res = await fetch(`${API_URL}/products${query ? '?' + query : ''}`, {
       next: { revalidate: 900 }
     })
     if (!res.ok) return []
@@ -92,7 +93,7 @@ export async function getProductsByCategory(
 // Получить один товар
 export async function getProduct(id: number): Promise<Product | null> {
   try {
-    const res = await fetch(`${API_URL}/products/${id}/`)
+    const res = await fetch(`${API_URL}/products/${id}`)
     if (!res.ok) return null
     return res.json()
   } catch {
@@ -103,7 +104,7 @@ export async function getProduct(id: number): Promise<Product | null> {
 // ADMIN: Получить все товары для админки
 export async function getAllProducts(token: string): Promise<Product[]> {
   try {
-    const res = await fetch(`${API_URL}/products/?include_hidden=true`, {
+    const res = await fetch(`${API_URL}/products?include_hidden=true`, {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store'
     })
@@ -120,7 +121,7 @@ export async function addProductImage(
   imageUrl: string,
   token: string
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/products/${productId}/add_image/`, {
+  const res = await fetch(`${API_URL}/products/${productId}/add_image`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export async function reorderImages(
   imageIds: number[],
   token: string
 ): Promise<void> {
-  const res = await fetch(`${API_URL}/products/${productId}/reorder_images/`, {
+  const res = await fetch(`${API_URL}/products/${productId}/reorder_images`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -150,7 +151,7 @@ export async function reorderImages(
 
 // ADMIN: Удалить изображение
 export async function deleteProductImage(imageId: number, token: string): Promise<void> {
-  const res = await fetch(`${API_URL}/product-images/${imageId}/`, {
+  const res = await fetch(`${API_URL}/product-images/${imageId}`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
   })
@@ -162,7 +163,7 @@ export async function toggleProductVisibility(
   productId: number,
   token: string
 ): Promise<{ is_hidden: boolean }> {
-  const res = await fetch(`${API_URL}/products/${productId}/toggle_visibility/`, {
+  const res = await fetch(`${API_URL}/products/${productId}/toggle_visibility`, {
     method: 'PATCH',
     headers: { 'Authorization': `Bearer ${token}` }
   })
@@ -172,7 +173,7 @@ export async function toggleProductVisibility(
 
 // ADMIN: Запустить синхронизацию вручную
 export async function triggerManualSync(token: string): Promise<{ status: string; log: SyncLog }> {
-  const res = await fetch(`${API_URL}/sync/manual_sync/`, {
+  const res = await fetch(`${API_URL}/sync/manual_sync`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}` }
   })
@@ -182,7 +183,7 @@ export async function triggerManualSync(token: string): Promise<{ status: string
 
 // ADMIN: Получить логи синхронизации
 export async function getSyncLogs(token: string): Promise<SyncLog[]> {
-  const res = await fetch(`${API_URL}/sync/`, {
+  const res = await fetch(`${API_URL}/sync`, {
     headers: { 'Authorization': `Bearer ${token}` }
   })
   if (!res.ok) throw new Error('Failed to fetch sync logs')

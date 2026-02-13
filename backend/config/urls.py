@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from catalog.views import CategoryViewSet, ProductViewSet, SyncViewSet
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'products', ProductViewSet, basename='product')
 router.register(r'sync', SyncViewSet, basename='sync')
