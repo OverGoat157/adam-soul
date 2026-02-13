@@ -264,6 +264,19 @@ def sync_offers_from_tree(root):
             logger.error(f"Ошибка обработки предложения: {str(e)}")
             continue
 
+    # Recalculate total_stock for products with size variants as sum of all size stocks
+    from django.db import connection
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            UPDATE catalog_product
+            SET total_stock = COALESCE((
+                SELECT SUM(stock)
+                FROM catalog_productsize
+                WHERE catalog_productsize.product_id = catalog_product.id
+            ), total_stock)
+        """)
+    logger.info("total_stock пересчитан для всех товаров с размерами")
+
 
 # ============================================================
 # Original pull-based class (preserved for backward compat)
