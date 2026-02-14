@@ -38,12 +38,8 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           <FavoriteButton productId={product.id.toString()} />
         </div>
 
-        {/* Stock Badge */}
-        {product.total_stock === 0 && (
-          <div className="absolute left-3 bottom-3 bg-red-500 text-white px-3 py-1 text-[11px] font-medium uppercase">
-            Нет в наличии
-          </div>
-        )}
+        {/* Stock Badge — shown only when stock tracking is active (total_stock > 0 means 1C tracks inventory) */}
+        {/* TODO: enable when 1C inventory tracking is configured */}
       </div>
 
       {/* Product Info */}
