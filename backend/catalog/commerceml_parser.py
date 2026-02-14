@@ -187,6 +187,7 @@ def sync_products_from_tree(root, image_url_prefix=''):
 def sync_offers_from_tree(root):
     """
     Sync prices and stock from a parsed XML ElementTree root.
+    Accumulates total_stock per product from all its offers.
     """
     ns = _detect_ns(root)
 
@@ -195,6 +196,9 @@ def sync_offers_from_tree(root):
 
     offers = root.findall(f'.//{t("Предложение")}')
     logger.info(f"Найдено {len(offers)} предложений")
+
+    # Accumulate total stock per product across all offers
+    product_total_stocks = {}  # product_id_1c -> sum of all offer stocks
 
     for offer in offers:
         try:
@@ -210,7 +214,7 @@ def sync_offers_from_tree(root):
             except Product.DoesNotExist:
                 continue
 
-            # Price
+            # Price (take from any offer — they all have the same price)
             price_elem = offer.find(
                 f'{t("Цены")}/{t("Цена")}/{t("ЦенаЗаЕдиницу")}'
             )
@@ -221,61 +225,64 @@ def sync_offers_from_tree(root):
                     pass
 
             # Stock
+            stock = 0
             stock_elem = offer.find(t('Количество'))
             if stock_elem is not None:
                 try:
                     stock = int(float(stock_elem.text))
-
-                    if '#' in offer_id:
-                        # Offer with characteristic (size variant)
-                        char_elems = offer.findall(
-                            f'{t("ХарактеристикиТовара")}/{t("ХарактеристикаТовара")}'
-                        )
-                        size_value = None
-                        for char in char_elems:
-                            char_name = char.find(t('Наименование'))
-                            char_value = char.find(t('Значение'))
-                            if char_name is not None and char_value is not None:
-                                if char_name.text and char_name.text.lower() in ['размер', 'size']:
-                                    size_value = char_value.text
-                                    break
-
-                        if size_value:
-                            size_obj, _ = ProductSize.objects.get_or_create(
-                                product=product,
-                                size=size_value
-                            )
-                            size_obj.stock = stock
-                            size_obj.save()
-                        else:
-                            size_obj = ProductSize.objects.filter(
-                                product=product
-                            ).first()
-                            if size_obj:
-                                size_obj.stock = stock
-                                size_obj.save()
-                    else:
-                        product.total_stock = stock
                 except Exception:
                     pass
+
+            # Accumulate total stock for this product
+            if product_id not in product_total_stocks:
+                product_total_stocks[product_id] = 0
+            product_total_stocks[product_id] += stock
+
+            # Try to update size-specific stock if this is a variant offer
+            if '#' in offer_id:
+                size_value = None
+
+                # Try ХарактеристикиТовара in the offer
+                char_elems = offer.findall(
+                    f'{t("ХарактеристикиТовара")}/{t("ХарактеристикаТовара")}'
+                )
+                for char in char_elems:
+                    char_name = char.find(t('Наименование'))
+                    char_value = char.find(t('Значение'))
+                    if char_name is not None and char_value is not None:
+                        if char_name.text and char_name.text.lower() in ['размер', 'size']:
+                            size_value = char_value.text
+                            break
+
+                # Fallback: try to extract size from offer name
+                # e.g. "Брюки мужские Moreno арт. 57, Размер: 52"
+                if not size_value:
+                    name_elem = offer.find(t('Наименование'))
+                    if name_elem is not None and name_elem.text:
+                        offer_name = name_elem.text
+                        for marker in ['Размер:', 'Размер ', 'Size:', 'Size ']:
+                            if marker in offer_name:
+                                size_value = offer_name.split(marker)[-1].strip().rstrip(')')
+                                break
+
+                if size_value:
+                    size_obj, _ = ProductSize.objects.get_or_create(
+                        product=product, size=size_value
+                    )
+                    size_obj.stock = stock
+                    size_obj.save()
 
             product.save()
         except Exception as e:
             logger.error(f"Ошибка обработки предложения: {str(e)}")
             continue
 
-    # Recalculate total_stock for products with size variants as sum of all size stocks
-    from django.db import connection
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            UPDATE catalog_product
-            SET total_stock = COALESCE((
-                SELECT SUM(stock)
-                FROM catalog_productsize
-                WHERE catalog_productsize.product_id = catalog_product.id
-            ), total_stock)
-        """)
-    logger.info("total_stock пересчитан для всех товаров с размерами")
+    # Bulk update total_stock for all products from accumulated values
+    updated = 0
+    for prod_id_1c, total in product_total_stocks.items():
+        Product.objects.filter(id_1c=prod_id_1c).update(total_stock=total)
+        updated += 1
+    logger.info(f"total_stock обновлён для {updated} товаров")
 
 
 # ============================================================
