@@ -255,7 +255,6 @@ def sync_offers_from_tree(root):
                             break
 
                 # Fallback: try to extract size from offer name
-                # e.g. "Брюки мужские Moreno арт. 57, Размер: 52"
                 if not size_value:
                     name_elem = offer.find(t('Наименование'))
                     if name_elem is not None and name_elem.text:
@@ -264,6 +263,18 @@ def sync_offers_from_tree(root):
                             if marker in offer_name:
                                 size_value = offer_name.split(marker)[-1].strip().rstrip(')')
                                 break
+                        # Fallback: extract from trailing parentheses
+                        # e.g. "Футболка арт. 241\12 B (5XL(60))" → "5XL(60)"
+                        if not size_value and offer_name.endswith(')'):
+                            depth = 0
+                            for i in range(len(offer_name) - 1, -1, -1):
+                                if offer_name[i] == ')':
+                                    depth += 1
+                                elif offer_name[i] == '(':
+                                    depth -= 1
+                                    if depth == 0:
+                                        size_value = offer_name[i+1:-1].strip()
+                                        break
 
                 if size_value:
                     size_obj, _ = ProductSize.objects.get_or_create(
@@ -368,10 +379,25 @@ def sync_offers_from_file(file_path):
                 if not size_value:
                     name_elem = elem.find(name_tag)
                     if name_elem is not None and name_elem.text:
+                        offer_name = name_elem.text
+                        # Try "Размер:" / "Size:" markers first
                         for marker in ['Размер:', 'Размер ', 'Size:', 'Size ']:
-                            if marker in name_elem.text:
-                                size_value = name_elem.text.split(marker)[-1].strip().rstrip(')')
+                            if marker in offer_name:
+                                size_value = offer_name.split(marker)[-1].strip().rstrip(')')
                                 break
+                        # Fallback: extract size from trailing parentheses
+                        # e.g. "Футболка арт. 241\12 B (5XL(60))" → "5XL(60)"
+                        if not size_value and offer_name.endswith(')'):
+                            # Find the matching opening paren
+                            depth = 0
+                            for i in range(len(offer_name) - 1, -1, -1):
+                                if offer_name[i] == ')':
+                                    depth += 1
+                                elif offer_name[i] == '(':
+                                    depth -= 1
+                                    if depth == 0:
+                                        size_value = offer_name[i+1:-1].strip()
+                                        break
 
                 if size_value:
                     size_updates.append((product_id, size_value, stock))
