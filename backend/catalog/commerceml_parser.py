@@ -285,6 +285,131 @@ def sync_offers_from_tree(root):
     logger.info(f"total_stock обновлён для {updated} товаров")
 
 
+def sync_offers_from_file(file_path):
+    """
+    Memory-efficient streaming parser for large offers.xml files.
+    Uses iterparse to process one <Предложение> at a time without loading
+    the entire XML tree into memory.
+    """
+    # Detect namespace from the root element
+    ns = ''
+    for event, elem in ET.iterparse(file_path, events=('start',)):
+        tag = elem.tag
+        if tag.startswith('{'):
+            ns = tag[1:tag.index('}')]
+        elem.clear()
+        break
+
+    def t(name):
+        return _make_tag(ns, name)
+
+    offer_tag = t('Предложение')
+    id_tag = t('Ид')
+    price_path = f'{t("Цены")}/{t("Цена")}/{t("ЦенаЗаЕдиницу")}'
+    stock_tag = t('Количество')
+    name_tag = t('Наименование')
+    chars_path = f'{t("ХарактеристикиТовара")}/{t("ХарактеристикаТовара")}'
+    char_name_tag = t('Наименование')
+    char_value_tag = t('Значение')
+
+    product_total_stocks = {}
+    product_prices = {}
+    size_updates = []  # (product_id_1c, size_value, stock)
+    offer_count = 0
+
+    for event, elem in ET.iterparse(file_path, events=('end',)):
+        if elem.tag != offer_tag:
+            continue
+
+        offer_count += 1
+        try:
+            id_elem = elem.find(id_tag)
+            if id_elem is None:
+                elem.clear()
+                continue
+
+            offer_id = id_elem.text
+            product_id = offer_id.split('#')[0]
+
+            # Price
+            price_elem = elem.find(price_path)
+            if price_elem is not None and product_id not in product_prices:
+                try:
+                    product_prices[product_id] = Decimal(price_elem.text)
+                except Exception:
+                    pass
+
+            # Stock
+            stock = 0
+            stock_elem = elem.find(stock_tag)
+            if stock_elem is not None:
+                try:
+                    stock = int(float(stock_elem.text))
+                except Exception:
+                    pass
+
+            if product_id not in product_total_stocks:
+                product_total_stocks[product_id] = 0
+            product_total_stocks[product_id] += stock
+
+            # Size-specific stock
+            if '#' in offer_id:
+                size_value = None
+
+                char_elems = elem.findall(chars_path)
+                for char in char_elems:
+                    cn = char.find(char_name_tag)
+                    cv = char.find(char_value_tag)
+                    if cn is not None and cv is not None:
+                        if cn.text and cn.text.lower() in ['размер', 'size']:
+                            size_value = cv.text
+                            break
+
+                if not size_value:
+                    name_elem = elem.find(name_tag)
+                    if name_elem is not None and name_elem.text:
+                        for marker in ['Размер:', 'Размер ', 'Size:', 'Size ']:
+                            if marker in name_elem.text:
+                                size_value = name_elem.text.split(marker)[-1].strip().rstrip(')')
+                                break
+
+                if size_value:
+                    size_updates.append((product_id, size_value, stock))
+
+        except Exception as e:
+            logger.error(f"Ошибка обработки предложения: {str(e)}")
+
+        elem.clear()
+
+    logger.info(f"Найдено {offer_count} предложений (streaming)")
+
+    # Bulk update prices
+    updated_prices = 0
+    for prod_id_1c, price in product_prices.items():
+        updated_prices += Product.objects.filter(id_1c=prod_id_1c).update(price=price)
+    logger.info(f"Цены обновлены для {updated_prices} товаров")
+
+    # Bulk update total_stock
+    updated_stock = 0
+    for prod_id_1c, total in product_total_stocks.items():
+        updated_stock += Product.objects.filter(id_1c=prod_id_1c).update(total_stock=total)
+    logger.info(f"total_stock обновлён для {updated_stock} товаров")
+
+    # Update size-specific stock
+    for prod_id_1c, size_value, stock in size_updates:
+        try:
+            product = Product.objects.get(id_1c=prod_id_1c)
+            size_obj, _ = ProductSize.objects.get_or_create(
+                product=product, size=size_value
+            )
+            size_obj.stock = stock
+            size_obj.save()
+        except Product.DoesNotExist:
+            continue
+
+    logger.info(f"Размеры обновлены: {len(size_updates)} записей")
+
+
 # ============================================================
 # Original pull-based class (preserved for backward compat)
 # ============================================================

@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from .models import SyncLog
-from .commerceml_parser import sync_categories_from_tree, sync_products_from_tree, sync_offers_from_tree
+from .commerceml_parser import sync_categories_from_tree, sync_products_from_tree, sync_offers_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -177,26 +177,27 @@ def handle_import(request):
     log = SyncLog.objects.create(status='running')
 
     try:
-        tree = ET.parse(file_path)
-        root = tree.getroot()
-
         # Use relative URLs so images load through Vercel's /media/ rewrite
         # (avoids mixed content: HTTPS page → HTTP VPS)
         media_url_prefix = f"{settings.MEDIA_URL}1c_images/"
 
         if 'import' in safe_filename.lower():
             # import.xml contains categories and products
+            tree = ET.parse(file_path)
+            root = tree.getroot()
             cat_count = sync_categories_from_tree(root)
             prod_count = sync_products_from_tree(root, image_url_prefix=media_url_prefix)
             log.categories_synced = cat_count
             log.products_synced = prod_count
             logger.info(f"1C exchange: imported {cat_count} categories, {prod_count} products")
         elif 'offers' in safe_filename.lower():
-            # offers.xml contains prices and stock
-            sync_offers_from_tree(root)
+            # offers.xml — use streaming parser (memory-efficient for large files)
+            sync_offers_from_file(file_path)
             logger.info("1C exchange: imported offers (prices and stock)")
         else:
             # Try to detect content from XML structure
+            tree = ET.parse(file_path)
+            root = tree.getroot()
             ns = 'urn:1C.ru:commerceml_2'
             classifier = root.find(f'{{{ns}}}Классификатор')
             catalog = root.find(f'{{{ns}}}Каталог')
@@ -209,7 +210,7 @@ def handle_import(request):
                 log.products_synced = prod_count
 
             if offers_package is not None:
-                sync_offers_from_tree(root)
+                sync_offers_from_file(file_path)
 
         log.status = 'success'
         log.finished_at = timezone.now()

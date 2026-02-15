@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 
 from catalog.commerceml_parser import (
     sync_categories_from_tree,
-    sync_offers_from_tree,
+    sync_offers_from_file,
     sync_products_from_tree,
 )
 
@@ -36,10 +36,8 @@ class Command(BaseCommand):
 
         if os.path.exists(offers_path):
             size_mb = os.path.getsize(offers_path) / 1024 / 1024
-            self.stdout.write(f'Parsing offers.xml ({size_mb:.1f} MB) — this may take a few minutes...')
-            tree = ET.parse(offers_path)
-            root = tree.getroot()
-            sync_offers_from_tree(root)
+            self.stdout.write(f'Parsing offers.xml ({size_mb:.1f} MB) — streaming parser...')
+            sync_offers_from_file(offers_path)
             self.stdout.write(self.style.SUCCESS('offers.xml: prices and stock updated'))
         else:
             self.stdout.write(self.style.WARNING('offers.xml not found'))
