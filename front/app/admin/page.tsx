@@ -8,14 +8,15 @@ import Image from "next/image"
 import { ArrowLeft, Upload, X, Plus, Trash2, Save, Search, ImageIcon, RefreshCw } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/header"
-import { 
-  getAllProducts, 
-  addProductImage, 
-  reorderImages, 
+import {
+  getAllProducts,
+  addProductImage,
+  reorderImages,
   deleteProductImage,
   toggleProductVisibility,
   triggerManualSync,
   getSyncLogs,
+  getSyncStatus,
   type Product,
   type SyncLog
 } from "@/lib/api/products"
@@ -35,6 +36,7 @@ export default function AdminPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
   const [showSyncLogs, setShowSyncLogs] = useState(false)
+  const [currentSync, setCurrentSync] = useState<SyncLog | null>(null)
 
   // Protect admin route
   useEffect(() => {
@@ -50,6 +52,28 @@ export default function AdminPage() {
       loadSyncLogs()
     }
   }, [isAuthenticated, user])
+
+  // Poll sync status while sync is running
+  useEffect(() => {
+    if (!isSyncing) return
+    const interval = setInterval(async () => {
+      try {
+        const syncStatus = await getSyncStatus()
+        setCurrentSync(syncStatus)
+        if (syncStatus?.status !== 'running') {
+          clearInterval(interval)
+          setIsSyncing(false)
+          if (syncStatus?.status === 'success') {
+            await loadProducts()
+          }
+          await loadSyncLogs()
+        }
+      } catch (e) {
+        console.error('Polling error:', e)
+      }
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [isSyncing])
 
   // Update images when product selected
   useEffect(() => {
@@ -91,23 +115,20 @@ export default function AdminPage() {
     }
 
     try {
-      setIsSyncing(true)
       const token = localStorage.getItem('admin_token') || ''
       const result = await triggerManualSync(token)
 
       if (result.status === 'success') {
-        alert('Синхронизация запущена! Обновите страницу через пару минут.')
-        await loadSyncLogs()
+        setIsSyncing(true)
+        setCurrentSync({ id: result.log_id ?? 0, status: 'running', progress: 0, current_step: 'Запуск...', started_at: new Date().toISOString(), finished_at: null, products_synced: 0, categories_synced: 0, error_message: '' })
       } else if (result.status === 'already_running') {
-        alert('Синхронизация уже выполняется. Подождите.')
+        setIsSyncing(true) // start polling to show current progress
       } else {
         alert('Ошибка при запуске синхронизации. Проверьте логи.')
       }
     } catch (error) {
       console.error('Sync error:', error)
       alert('Ошибка при запуске синхронизации')
-    } finally {
-      setIsSyncing(false)
     }
   }
 
@@ -256,6 +277,32 @@ export default function AdminPage() {
             </button>
           </div>
         </div>
+
+        {/* Sync Progress Bar */}
+        {currentSync && (isSyncing || currentSync.status === 'running' || currentSync.status === 'error') && (
+          <div className="mb-6 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+            <div className="mb-3 flex items-center justify-between">
+              <span className={cn(
+                "text-[13px] font-medium",
+                currentSync.status === 'error' ? "text-red-600" : "text-[#1A1A1A]"
+              )}>
+                {currentSync.status === 'error'
+                  ? `Ошибка: ${currentSync.error_message || 'Неизвестная ошибка'}`
+                  : currentSync.current_step || 'Синхронизация...'}
+              </span>
+              <span className="text-[13px] text-[#999999]">{currentSync.progress}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-[#F0F0F0] overflow-hidden">
+              <div
+                className={cn(
+                  "h-full transition-all duration-500",
+                  currentSync.status === 'error' ? "bg-red-500" : "bg-black"
+                )}
+                style={{ width: `${currentSync.progress}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Sync Logs */}
         {showSyncLogs && (

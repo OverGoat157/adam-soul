@@ -17,7 +17,11 @@ EXCHANGE_DIR = os.path.join(settings.MEDIA_ROOT, '1c_exchange_tmp')
 class Command(BaseCommand):
     help = 'Manually parse 1C XML files from media/1c_exchange_tmp/'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--log-id', type=int, default=None, dest='log_id')
+
     def handle(self, *args, **options):
+        log_id = options.get('log_id')
         import_path = os.path.join(EXCHANGE_DIR, 'import.xml')
         offers_path = os.path.join(EXCHANGE_DIR, 'offers.xml')
 
@@ -38,14 +42,14 @@ class Command(BaseCommand):
         if os.path.exists(offers_path):
             size_mb = os.path.getsize(offers_path) / 1024 / 1024
             self.stdout.write(f'Parsing offers.xml ({size_mb:.1f} MB) — streaming parser...')
-            sync_offers_from_file(offers_path)
+            sync_offers_from_file(offers_path, log_id=log_id)
             self.stdout.write(self.style.SUCCESS('offers.xml: prices and stock updated'))
         else:
             self.stdout.write(self.style.WARNING('offers.xml not found'))
 
         # Merge products with same article into one
         self.stdout.write('Merging products by article...')
-        merged, hidden = merge_products_by_article()
+        merged, hidden = merge_products_by_article(log_id=log_id)
         self.stdout.write(self.style.SUCCESS(
             f'Merged: {merged} groups, {hidden} duplicates hidden'
         ))

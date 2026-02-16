@@ -81,6 +81,8 @@ class SyncLog(models.Model):
     products_synced = models.IntegerField(default=0)
     categories_synced = models.IntegerField(default=0)
     error_message = models.TextField(blank=True)
+    progress = models.IntegerField(default=0)          # 0–100
+    current_step = models.CharField(max_length=255, blank=True)
     
     class Meta:
         ordering = ['-started_at']

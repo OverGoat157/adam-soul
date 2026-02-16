@@ -296,12 +296,24 @@ def sync_offers_from_tree(root):
     logger.info(f"total_stock обновлён для {updated} товаров")
 
 
-def sync_offers_from_file(file_path):
+def _update_log(log_id, progress, step):
+    """Update SyncLog progress and current_step without loading the full object."""
+    if log_id is None:
+        return
+    try:
+        from .models import SyncLog
+        SyncLog.objects.filter(id=log_id).update(progress=progress, current_step=step)
+    except Exception:
+        pass
+
+
+def sync_offers_from_file(file_path, log_id=None):
     """
     Memory-efficient streaming parser for large offers.xml files.
     Uses iterparse to process one <Предложение> at a time without loading
     the entire XML tree into memory.
     """
+    _update_log(log_id, 5, 'Определение формата файла...')
     # Detect namespace from the root element
     ns = ''
     for event, elem in ET.iterparse(file_path, events=('start',)):
@@ -327,6 +339,8 @@ def sync_offers_from_file(file_path):
     product_prices = {}
     size_updates = []  # (product_id_1c, size_value, stock)
     offer_count = 0
+
+    _update_log(log_id, 10, 'Парсинг предложений (цены, остатки, размеры)...')
 
     for event, elem in ET.iterparse(file_path, events=('end',)):
         if elem.tag != offer_tag:
@@ -407,21 +421,29 @@ def sync_offers_from_file(file_path):
 
         elem.clear()
 
+        # Обновляем прогресс каждые 5000 предложений (10%→75%)
+        if log_id and offer_count % 5000 == 0 and offer_count > 0:
+            progress = min(10 + (offer_count // 1000), 75)
+            _update_log(log_id, progress, f'Обработано {offer_count} предложений...')
+
     logger.info(f"Найдено {offer_count} предложений (streaming)")
 
     # Bulk update prices
+    _update_log(log_id, 78, f'Найдено {offer_count} предложений. Обновление цен...')
     updated_prices = 0
     for prod_id_1c, price in product_prices.items():
         updated_prices += Product.objects.filter(id_1c=prod_id_1c).update(price=price)
     logger.info(f"Цены обновлены для {updated_prices} товаров")
 
     # Bulk update total_stock
+    _update_log(log_id, 85, f'Обновление остатков ({updated_prices} товаров)...')
     updated_stock = 0
     for prod_id_1c, total in product_total_stocks.items():
         updated_stock += Product.objects.filter(id_1c=prod_id_1c).update(total_stock=total)
     logger.info(f"total_stock обновлён для {updated_stock} товаров")
 
     # Update size-specific stock
+    _update_log(log_id, 90, f'Обновление размеров ({len(size_updates)} записей)...')
     for prod_id_1c, size_value, stock in size_updates:
         try:
             product = Product.objects.get(id_1c=prod_id_1c)
@@ -453,7 +475,7 @@ def _extract_size_from_name(name):
     return None
 
 
-def merge_products_by_article():
+def merge_products_by_article(log_id=None):
     """
     Merge products with the same article into one product.
     - Main product: most images, then highest total_stock
@@ -472,6 +494,7 @@ def merge_products_by_article():
         if p.article:
             groups[p.article].append(p)
 
+    _update_log(log_id, 95, 'Объединение дублей по артикулу...')
     merged_count = 0
     hidden_count = 0
 

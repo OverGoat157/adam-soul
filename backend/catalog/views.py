@@ -123,16 +123,18 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
                 'message': 'Синхронизация уже выполняется',
             })
 
-        log = SyncLog.objects.create(status='running')
+        log = SyncLog.objects.create(status='running', current_step='Запуск синхронизации...', progress=0)
 
         def run_sync(log_id):
             import django
             django.db.connection.close()
             try:
-                call_command('parse_1c_xml')
+                call_command('parse_1c_xml', log_id=log_id)
                 SyncLog.objects.filter(id=log_id).update(
                     status='success',
                     finished_at=timezone.now(),
+                    progress=100,
+                    current_step='Синхронизация завершена',
                 )
                 logger.info("Manual sync completed successfully")
             except Exception as e:
@@ -141,6 +143,7 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
                     status='error',
                     error_message=str(e),
                     finished_at=timezone.now(),
+                    current_step=f'Ошибка: {str(e)[:200]}',
                 )
 
         thread = threading.Thread(target=run_sync, args=(log.id,), daemon=True)
@@ -149,4 +152,13 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
         return Response({
             'status': 'success',
             'message': 'Синхронизация запущена',
+            'log_id': log.id,
         })
+
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def status(self, request):
+        """Текущий статус синхронизации — последний лог."""
+        log = SyncLog.objects.first()
+        if not log:
+            return Response({'status': 'idle'})
+        return Response(SyncLogSerializer(log).data)

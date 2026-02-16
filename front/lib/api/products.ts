@@ -43,6 +43,8 @@ export interface SyncLog {
   products_synced: number
   categories_synced: number
   error_message: string
+  progress: number
+  current_step: string
   duration?: number
 }
 
@@ -176,7 +178,7 @@ export async function toggleProductVisibility(
 }
 
 // ADMIN: Запустить синхронизацию вручную
-export async function triggerManualSync(token: string): Promise<{ status: string; message?: string }> {
+export async function triggerManualSync(token: string): Promise<{ status: string; message?: string; log_id?: number }> {
   const res = await fetch(`${API_URL}/sync/manual_sync`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}` }
@@ -192,4 +194,15 @@ export async function getSyncLogs(token: string): Promise<SyncLog[]> {
   })
   if (!res.ok) throw new Error('Failed to fetch sync logs')
   return res.json()
+}
+
+// ADMIN: Текущий статус синхронизации (для поллинга)
+export async function getSyncStatus(): Promise<SyncLog | null> {
+  try {
+    const res = await fetch(`${API_URL}/sync/status`, { cache: 'no-store' })
+    if (!res.ok) return null
+    return res.json()
+  } catch {
+    return null
+  }
 }

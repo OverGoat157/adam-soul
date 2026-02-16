@@ -247,16 +247,30 @@ def handle_complete():
 
     offers_path = os.path.join(EXCHANGE_DIR, 'offers.xml')
 
+    log = SyncLog.objects.create(status='running', current_step='Запуск парсинга...')
+
     def parse_and_cleanup():
         django.db.connection.close()
         try:
             if os.path.exists(offers_path):
                 logger.info("1C exchange: complete — parsing offers.xml in background")
-                sync_offers_from_file(offers_path)
-                merge_products_by_article()
+                sync_offers_from_file(offers_path, log_id=log.id)
+                merge_products_by_article(log_id=log.id)
+                SyncLog.objects.filter(id=log.id).update(
+                    status='success',
+                    progress=100,
+                    current_step='Синхронизация завершена',
+                    finished_at=timezone.now(),
+                )
                 logger.info("1C exchange: offers parsed and merged successfully")
         except Exception as e:
             logger.error(f"1C exchange: error parsing offers in complete: {e}")
+            SyncLog.objects.filter(id=log.id).update(
+                status='error',
+                error_message=str(e),
+                current_step=f'Ошибка: {str(e)[:200]}',
+                finished_at=timezone.now(),
+            )
         finally:
             # Clean up temp XML files after parsing
             if os.path.exists(EXCHANGE_DIR):
