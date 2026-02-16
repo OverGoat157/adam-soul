@@ -1,7 +1,7 @@
 // front/components/catalog-page.tsx
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Header } from "@/components/header"
 import { CategorySidebar } from "@/components/category-sidebar"
 import { ProductGrid } from "@/components/product-grid"
@@ -31,10 +31,25 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   const [filterBS, setFilterBS] = useState(false)
   const [filterZidan, setFilterZidan] = useState(false)
   const [priceSort, setPriceSort] = useState<PriceSort>("none")
+  const [stickyVisible, setStickyVisible] = useState(false)
 
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Ref на секцию с большим заголовком — sticky появляется когда она уходит вверх
+  const headerSectionRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = headerSectionRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickyVisible(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "-80px 0px 0px 0px" }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // Debounce поискового запроса — 400ms
   useEffect(() => {
@@ -42,13 +57,8 @@ export function CatalogPage({ collection }: CatalogPageProps) {
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  useEffect(() => {
-    loadCategories()
-  }, [collection])
-
-  useEffect(() => {
-    loadProducts()
-  }, [collection, activeCategory, debouncedSearch])
+  useEffect(() => { loadCategories() }, [collection])
+  useEffect(() => { loadProducts() }, [collection, activeCategory, debouncedSearch])
 
   const loadCategories = async () => {
     try {
@@ -91,11 +101,8 @@ export function CatalogPage({ collection }: CatalogPageProps) {
       })
     }
 
-    if (priceSort === 'asc') {
-      result.sort((a, b) => a.price - b.price)
-    } else if (priceSort === 'desc') {
-      result.sort((a, b) => b.price - a.price)
-    }
+    if (priceSort === 'asc') result.sort((a, b) => a.price - b.price)
+    else if (priceSort === 'desc') result.sort((a, b) => b.price - a.price)
 
     return result
   }, [products, filterBS, filterZidan, priceSort])
@@ -108,6 +115,83 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   const cyclePriceSort = () => {
     setPriceSort((prev) => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none')
   }
+
+  // Блок фильтров — используется и вверху страницы, и в sticky-баре
+  const FiltersRow = ({ compact = false }: { compact?: boolean }) => (
+    <div className={cn("flex flex-wrap items-center gap-2", compact ? "" : "mt-4")}>
+      {/* Поиск */}
+      <div className={cn("relative", compact ? "min-w-[160px] flex-1 sm:max-w-[220px]" : "w-full sm:w-72")}>
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#999999]" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Поиск по названию или артикулу..."
+          className={cn(
+            "w-full border border-[#E0E0E0] bg-white pl-8 pr-7 text-[#1A1A1A] placeholder-[#BBBBBB] outline-none focus:border-[#999999] transition-colors",
+            compact ? "py-1.5 text-[12px]" : "py-2.5 text-[13px]"
+          )}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#1A1A1A] transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Фильтр BS */}
+      <button
+        onClick={() => setFilterBS(!filterBS)}
+        className={cn(
+          "px-3 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
+          compact ? "py-1.5" : "py-2",
+          filterBS
+            ? "bg-black text-white border-black"
+            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
+        )}
+      >
+        BS
+      </button>
+
+      {/* Фильтр Zidan */}
+      <button
+        onClick={() => setFilterZidan(!filterZidan)}
+        className={cn(
+          "px-3 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
+          compact ? "py-1.5" : "py-2",
+          filterZidan
+            ? "bg-black text-white border-black"
+            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
+        )}
+      >
+        Zidan
+      </button>
+
+      {/* Сортировка по цене */}
+      <button
+        onClick={cyclePriceSort}
+        className={cn(
+          "flex items-center gap-1.5 px-3 text-[11px] font-medium uppercase tracking-wide border transition-colors shrink-0",
+          compact ? "py-1.5" : "py-2",
+          priceSort !== 'none'
+            ? "bg-black text-white border-black"
+            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
+        )}
+      >
+        {priceSort === 'asc' && <ArrowUp className="h-3 w-3" />}
+        {priceSort === 'desc' && <ArrowDown className="h-3 w-3" />}
+        {priceSort === 'none' && <ArrowUpDown className="h-3 w-3" />}
+        Цена
+      </button>
+    </div>
+  )
+
+  const paddingClass = sidebarOpen
+    ? "px-6 md:px-10"
+    : "px-6 md:pl-[68px] md:pr-[68px]"
 
   return (
     <div className="min-h-screen bg-white">
@@ -123,109 +207,48 @@ export function CatalogPage({ collection }: CatalogPageProps) {
         />
 
         <main className="flex-1 transition-all duration-300">
-          {/* Sticky панель: категория + поиск + фильтры */}
-          <div className="sticky top-[80px] z-20 bg-white border-b border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-            <div className={cn(
-              "mx-auto max-w-[1200px] py-3 transition-all duration-300",
-              sidebarOpen
-                ? "px-6 md:px-10"
-                : "px-6 md:pl-[68px] md:pr-[68px]"
-            )}>
+
+          {/* Sticky-бар — появляется когда заголовок уходит вверх */}
+          <div className={cn(
+            "sticky top-[80px] z-20 bg-white border-b border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200",
+            stickyVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          )}>
+            <div className={cn("mx-auto max-w-[1200px] py-2.5 transition-all duration-300", paddingClass)}>
               <div className="flex flex-wrap items-center gap-2">
-                {/* Название категории */}
-                <span className="mr-2 text-[13px] font-medium text-[#1A1A1A] shrink-0">
+                <span className="mr-1 text-[13px] font-medium text-[#1A1A1A] shrink-0">
                   {activeCategoryName}
                 </span>
-
-                <div className="flex flex-1 flex-wrap items-center gap-2">
-                  {/* Поиск */}
-                  <div className="relative min-w-[180px] flex-1 sm:max-w-[260px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#999999]" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Поиск..."
-                      className="w-full border border-[#E0E0E0] bg-white py-1.5 pl-8 pr-7 text-[12px] text-[#1A1A1A] placeholder-[#BBBBBB] outline-none focus:border-[#999999] transition-colors"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#1A1A1A] transition-colors"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Фильтр BS */}
-                  <button
-                    onClick={() => setFilterBS(!filterBS)}
-                    className={cn(
-                      "px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
-                      filterBS
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
-                    )}
-                  >
-                    BS
-                  </button>
-
-                  {/* Фильтр Zidan */}
-                  <button
-                    onClick={() => setFilterZidan(!filterZidan)}
-                    className={cn(
-                      "px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
-                      filterZidan
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
-                    )}
-                  >
-                    Zidan
-                  </button>
-
-                  {/* Сортировка по цене */}
-                  <button
-                    onClick={cyclePriceSort}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide border transition-colors shrink-0",
-                      priceSort !== 'none'
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
-                    )}
-                  >
-                    {priceSort === 'asc' && <ArrowUp className="h-3 w-3" />}
-                    {priceSort === 'desc' && <ArrowDown className="h-3 w-3" />}
-                    {priceSort === 'none' && <ArrowUpDown className="h-3 w-3" />}
-                    Цена
-                  </button>
-                </div>
+                <FiltersRow compact />
               </div>
             </div>
           </div>
 
-          <div
-            className={cn(
-              "mx-auto max-w-[1200px] pb-16 transition-all duration-300",
-              sidebarOpen
-                ? "px-6 md:px-10"
-                : "px-6 md:pl-[68px] md:pr-[68px]"
-            )}
-          >
-            <div className="mb-10 mt-10 md:mb-12 md:mt-12">
+          <div className={cn("mx-auto max-w-[1200px] pb-16 transition-all duration-300", paddingClass)}>
+
+            {/* Большой заголовок + фильтры справа */}
+            <div ref={headerSectionRef} className="mb-10 mt-14 md:mb-12 md:mt-16">
               <p className="mb-3 text-[11px] font-medium uppercase tracking-[4px] text-[#999999]">
                 Каталог
               </p>
-              <h1 className="text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
-                {activeCategoryName}
-              </h1>
-              <p className="mt-3 text-[15px] text-[#666666]">
-                {loading ? (
-                  <span>Загрузка...</span>
-                ) : (
-                  <span>{filteredProducts.length} {getProductsLabel(filteredProducts.length)}</span>
-                )}
-              </p>
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h1 className="text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
+                    {activeCategoryName}
+                  </h1>
+                  <p className="mt-3 text-[15px] text-[#666666]">
+                    {loading ? (
+                      <span>Загрузка...</span>
+                    ) : (
+                      <span>{filteredProducts.length} {getProductsLabel(filteredProducts.length)}</span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Поиск и фильтры справа от заголовка */}
+                <div className="shrink-0 md:pt-2">
+                  <FiltersRow />
+                </div>
+              </div>
             </div>
 
             {loading ? (
@@ -251,18 +274,8 @@ export function CatalogPage({ collection }: CatalogPageProps) {
 function getProductsLabel(count: number): string {
   const lastDigit = count % 10
   const lastTwoDigits = count % 100
-
-  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
-    return "товаров"
-  }
-
-  if (lastDigit === 1) {
-    return "товар"
-  }
-
-  if (lastDigit >= 2 && lastDigit <= 4) {
-    return "товара"
-  }
-
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) return "товаров"
+  if (lastDigit === 1) return "товар"
+  if (lastDigit >= 2 && lastDigit <= 4) return "товара"
   return "товаров"
 }
