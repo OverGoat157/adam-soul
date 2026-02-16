@@ -436,6 +436,116 @@ def sync_offers_from_file(file_path):
     logger.info(f"Размеры обновлены: {len(size_updates)} записей")
 
 
+def _extract_size_from_name(name):
+    """Extract size from trailing parentheses in product name.
+    e.g. 'Футболка арт. 241\\12 B (5XL(60))' → '5XL(60)'
+    """
+    if not name or not name.endswith(')'):
+        return None
+    depth = 0
+    for i in range(len(name) - 1, -1, -1):
+        if name[i] == ')':
+            depth += 1
+        elif name[i] == '(':
+            depth -= 1
+            if depth == 0:
+                return name[i+1:-1].strip() or None
+    return None
+
+
+def merge_products_by_article():
+    """
+    Merge products with the same article into one product.
+    - Main product: most images, then highest total_stock
+    - Others: their sizes/stock are moved to main, then hidden
+    """
+    from collections import defaultdict
+    from django.db.models import Count
+
+    # Group products by article
+    products = Product.objects.filter(is_active=True).annotate(
+        image_count=Count('images')
+    ).order_by('-image_count', '-total_stock', 'id')
+
+    groups = defaultdict(list)
+    for p in products:
+        if p.article:
+            groups[p.article].append(p)
+
+    merged_count = 0
+    hidden_count = 0
+
+    for article, prods in groups.items():
+        if len(prods) <= 1:
+            continue
+
+        main = prods[0]  # most images, then highest stock
+        others = prods[1:]
+
+        # First, reset: unhide main, collect all sizes
+        main.is_hidden = False
+
+        # Gather sizes from main's existing ProductSize records
+        main_sizes = {}  # size_value -> stock
+        for ps in ProductSize.objects.filter(product=main):
+            main_sizes[ps.size] = ps.stock
+
+        # If main has no sizes but has stock, create a size from its name
+        if not main_sizes and main.total_stock > 0:
+            size_val = _extract_size_from_name(main.name)
+            if size_val:
+                main_sizes[size_val] = main.total_stock
+
+        total_stock_sum = main.total_stock
+
+        for other in others:
+            other_sizes = list(ProductSize.objects.filter(product=other))
+
+            if other_sizes:
+                # Move existing sizes to main
+                for ps in other_sizes:
+                    if ps.size in main_sizes:
+                        main_sizes[ps.size] += ps.stock
+                    else:
+                        main_sizes[ps.size] = ps.stock
+            elif other.total_stock > 0:
+                # No ProductSize records — extract size from name
+                size_val = _extract_size_from_name(other.name)
+                if size_val:
+                    if size_val in main_sizes:
+                        main_sizes[size_val] += other.total_stock
+                    else:
+                        main_sizes[size_val] = other.total_stock
+
+            total_stock_sum += other.total_stock
+
+            # Take price/description from other if main lacks them
+            if main.price == 0 and other.price > 0:
+                main.price = other.price
+            if not main.description and other.description:
+                main.description = other.description
+
+            # Hide the duplicate
+            other.is_hidden = True
+            other.save(update_fields=['is_hidden'])
+            hidden_count += 1
+
+        # Write merged sizes to main
+        ProductSize.objects.filter(product=main).delete()
+        for size_val, stock in sorted(main_sizes.items()):
+            ProductSize.objects.create(product=main, size=size_val, stock=stock)
+
+        main.total_stock = total_stock_sum
+        main.save(update_fields=['total_stock', 'price', 'description', 'is_hidden'])
+        merged_count += 1
+
+    logger.info(
+        f"Объединение по артикулу: {merged_count} групп, "
+        f"{hidden_count} дублей скрыто"
+    )
+    return merged_count, hidden_count
+
+
 # ============================================================
 # Original pull-based class (preserved for backward compat)
 # ============================================================

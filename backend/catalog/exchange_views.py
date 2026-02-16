@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from .models import SyncLog
-from .commerceml_parser import sync_categories_from_tree, sync_products_from_tree, sync_offers_from_file
+from .commerceml_parser import sync_categories_from_tree, sync_products_from_tree, sync_offers_from_file, merge_products_by_article
 
 logger = logging.getLogger(__name__)
 
@@ -193,7 +193,8 @@ def handle_import(request):
         elif 'offers' in safe_filename.lower():
             # offers.xml — use streaming parser (memory-efficient for large files)
             sync_offers_from_file(file_path)
-            logger.info("1C exchange: imported offers (prices and stock)")
+            merge_products_by_article()
+            logger.info("1C exchange: imported offers (prices and stock), merged by article")
         else:
             # Try to detect content from XML structure
             tree = ET.parse(file_path)

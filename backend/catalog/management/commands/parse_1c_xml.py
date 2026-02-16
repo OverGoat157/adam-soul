@@ -8,6 +8,7 @@ from catalog.commerceml_parser import (
     sync_categories_from_tree,
     sync_offers_from_file,
     sync_products_from_tree,
+    merge_products_by_article,
 )
 
 EXCHANGE_DIR = os.path.join(settings.MEDIA_ROOT, '1c_exchange_tmp')
@@ -41,3 +42,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('offers.xml: prices and stock updated'))
         else:
             self.stdout.write(self.style.WARNING('offers.xml not found'))
+
+        # Merge products with same article into one
+        self.stdout.write('Merging products by article...')
+        merged, hidden = merge_products_by_article()
+        self.stdout.write(self.style.SUCCESS(
+            f'Merged: {merged} groups, {hidden} duplicates hidden'
+        ))
