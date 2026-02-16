@@ -91,44 +91,50 @@ export function CatalogPage({ collection }: CatalogPageProps) {
         />
 
         <main className="flex-1 transition-all duration-300">
-          <div 
+          {/* Sticky поиск */}
+          <div className="sticky top-[80px] z-20 bg-white border-b border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <div className={cn(
+              "mx-auto max-w-[1200px] py-3 transition-all duration-300",
+              sidebarOpen
+                ? "px-6 md:px-10"
+                : "px-6 md:pl-[68px] md:pr-[68px]"
+            )}>
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999999]" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Поиск по названию или артикулу..."
+                  className="w-full border border-[#E0E0E0] bg-white py-2 pl-9 pr-8 text-[13px] text-[#1A1A1A] placeholder-[#BBBBBB] outline-none focus:border-[#999999] transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#1A1A1A] transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div
             className={cn(
               "mx-auto max-w-[1200px] pb-16 transition-all duration-300",
-              sidebarOpen 
-                ? "px-6 md:px-10" 
+              sidebarOpen
+                ? "px-6 md:px-10"
                 : "px-6 md:pl-[68px] md:pr-[68px]"
             )}
           >
-            <div className="mb-10 mt-14 md:mb-12 md:mt-16">
+            <div className="mb-10 mt-10 md:mb-12 md:mt-12">
               <p className="mb-3 text-[11px] font-medium uppercase tracking-[4px] text-[#999999]">
                 Каталог
               </p>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <h1 className="text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
-                  {activeCategoryName}
-                </h1>
-
-                {/* Поиск */}
-                <div className="relative w-full sm:w-72 shrink-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999999]" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Название или артикул..."
-                    className="w-full border border-[#E0E0E0] bg-white py-2.5 pl-9 pr-8 text-[13px] text-[#1A1A1A] placeholder-[#BBBBBB] outline-none focus:border-[#999999] transition-colors"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#1A1A1A] transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
+              <h1 className="text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
+                {activeCategoryName}
+              </h1>
               <p className="mt-3 text-[15px] text-[#666666]">
                 {loading ? (
                   <span>Загрузка...</span>
