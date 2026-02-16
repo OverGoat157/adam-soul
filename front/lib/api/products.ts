@@ -172,7 +172,7 @@ export async function toggleProductVisibility(
 }
 
 // ADMIN: Запустить синхронизацию вручную
-export async function triggerManualSync(token: string): Promise<{ status: string; log: SyncLog }> {
+export async function triggerManualSync(token: string): Promise<{ status: string; message?: string }> {
   const res = await fetch(`${API_URL}/sync/manual_sync`, {
     method: 'POST',
     headers: { 'Authorization': `Bearer ${token}` }

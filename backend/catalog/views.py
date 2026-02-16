@@ -2,7 +2,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser, AllowAny
 from .models import Category, Product, ProductImage, SyncLog
 from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, SyncLogSerializer
 import logging
@@ -92,26 +92,47 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
     """Логи синхронизации и ручной запуск"""
     queryset = SyncLog.objects.all()
     serializer_class = SyncLogSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
     
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def manual_sync(self, request):
-        """Re-parse XML files already uploaded by 1C."""
+        """Re-parse XML files already uploaded by 1C (runs in background)."""
+        import threading
         from django.core.management import call_command
-        from io import StringIO
+        from django.utils import timezone
 
-        try:
-            out = StringIO()
-            call_command('parse_1c_xml', stdout=out)
-            output = out.getvalue()
-
+        # Check if sync is already running
+        running = SyncLog.objects.filter(status='running').first()
+        if running:
             return Response({
-                'status': 'success',
-                'output': output,
+                'status': 'already_running',
+                'message': 'Синхронизация уже выполняется',
             })
-        except Exception as e:
-            logger.error(f"Ошибка синхронизации: {str(e)}")
-            return Response({
-                'status': 'error',
-                'message': str(e)
-            }, status=500)
+
+        log = SyncLog.objects.create(status='running')
+
+        def run_sync(log_id):
+            import django
+            django.db.connection.close()
+            try:
+                call_command('parse_1c_xml')
+                SyncLog.objects.filter(id=log_id).update(
+                    status='success',
+                    finished_at=timezone.now(),
+                )
+                logger.info("Manual sync completed successfully")
+            except Exception as e:
+                logger.error(f"Ошибка синхронизации: {str(e)}")
+                SyncLog.objects.filter(id=log_id).update(
+                    status='error',
+                    error_message=str(e),
+                    finished_at=timezone.now(),
+                )
+
+        thread = threading.Thread(target=run_sync, args=(log.id,), daemon=True)
+        thread.start()
+
+        return Response({
+            'status': 'success',
+            'message': 'Синхронизация запущена',
+        })

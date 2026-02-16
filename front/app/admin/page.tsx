@@ -93,13 +93,14 @@ export default function AdminPage() {
       setIsSyncing(true)
       const token = localStorage.getItem('admin_token') || ''
       const result = await triggerManualSync(token)
-      
+
       if (result.status === 'success') {
-        alert('Синхронизация завершена успешно!')
-        await loadProducts()
+        alert('Синхронизация запущена! Обновите страницу через пару минут.')
         await loadSyncLogs()
+      } else if (result.status === 'already_running') {
+        alert('Синхронизация уже выполняется. Подождите.')
       } else {
-        alert('Синхронизация завершена с ошибками. Проверьте логи.')
+        alert('Ошибка при запуске синхронизации. Проверьте логи.')
       }
     } catch (error) {
       console.error('Sync error:', error)
