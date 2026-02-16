@@ -65,15 +65,16 @@ export async function getCategoriesByCollection(collection: 'classic' | 'casual'
 }
 
 // Получить товары по категории
-export async function getProducts(category: string = 'all', collection?: string): Promise<Product[]> {
+export async function getProducts(category: string = 'all', collection?: string, search?: string): Promise<Product[]> {
   try {
     const params = new URLSearchParams()
     if (category !== 'all') params.append('category', category)
     if (collection) params.append('collection', collection)
+    if (search) params.append('search', search)
 
     const query = params.toString()
     const res = await fetch(`${API_URL}/products${query ? '?' + query : ''}`, {
-      next: { revalidate: 900 }
+      next: { revalidate: search ? 0 : 900 }
     })
     if (!res.ok) return []
     return res.json()
@@ -85,9 +86,10 @@ export async function getProducts(category: string = 'all', collection?: string)
 // Получить товары по категории с фильтром по коллекции
 export async function getProductsByCategory(
   collection: 'classic' | 'casual',
-  category: string
+  category: string,
+  search?: string
 ): Promise<Product[]> {
-  return getProducts(category, collection)
+  return getProducts(category, collection, search)
 }
 
 // Получить один товар

@@ -29,10 +29,17 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_hidden=False)
         
         category = self.request.query_params.get('category', None)
-        
+        search = self.request.query_params.get('search', None)
+
         if category and category != 'all':
             queryset = queryset.filter(category__slug=category)
-        
+
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(name__icontains=search) | Q(article__icontains=search)
+            )
+
         return queryset.select_related('category').prefetch_related('images', 'sizes')
     
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])

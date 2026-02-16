@@ -6,12 +6,13 @@ import { Header } from "@/components/header"
 import { CategorySidebar } from "@/components/category-sidebar"
 import { ProductGrid } from "@/components/product-grid"
 import { ProductModal } from "@/components/product-modal"
-import { 
-  getCategoriesByCollection, 
-  getProductsByCategory, 
-  type Product, 
-  type Category 
-} from "@/lib/api/products" // Изменено - теперь из api/products
+import { Search, X } from "lucide-react"
+import {
+  getCategoriesByCollection,
+  getProductsByCategory,
+  type Product,
+  type Category
+} from "@/lib/api/products"
 import { cn } from "@/lib/utils"
 
 interface CatalogPageProps {
@@ -23,10 +24,18 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Debounce поискового запроса — 400ms
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   useEffect(() => {
     loadCategories()
@@ -34,7 +43,7 @@ export function CatalogPage({ collection }: CatalogPageProps) {
 
   useEffect(() => {
     loadProducts()
-  }, [collection, activeCategory])
+  }, [collection, activeCategory, debouncedSearch])
 
   const loadCategories = async () => {
     try {
@@ -48,7 +57,7 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   const loadProducts = async () => {
     try {
       setLoading(true)
-      const data = await getProductsByCategory(collection, activeCategory)
+      const data = await getProductsByCategory(collection, activeCategory, debouncedSearch || undefined)
       setProducts(data)
     } catch (error) {
       console.error('Failed to load products:', error)
@@ -94,9 +103,32 @@ export function CatalogPage({ collection }: CatalogPageProps) {
               <p className="mb-3 text-[11px] font-medium uppercase tracking-[4px] text-[#999999]">
                 Каталог
               </p>
-              <h1 className="text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
-                {activeCategoryName}
-              </h1>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <h1 className="text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
+                  {activeCategoryName}
+                </h1>
+
+                {/* Поиск */}
+                <div className="relative w-full sm:w-72 shrink-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999999]" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Название или артикул..."
+                    className="w-full border border-[#E0E0E0] bg-white py-2.5 pl-9 pr-8 text-[13px] text-[#1A1A1A] placeholder-[#BBBBBB] outline-none focus:border-[#999999] transition-colors"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#1A1A1A] transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <p className="mt-3 text-[15px] text-[#666666]">
                 {loading ? (
                   <span>Загрузка...</span>
