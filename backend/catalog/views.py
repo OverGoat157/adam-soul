@@ -5,8 +5,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser
 from .models import Category, Product, ProductImage, SyncLog
 from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, SyncLogSerializer
-from .commerceml_parser import CommerceMLParser
-from django.conf import settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -98,23 +96,21 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=False, methods=['post'])
     def manual_sync(self, request):
-        """Ручной запуск синхронизации"""
+        """Re-parse XML files already uploaded by 1C."""
+        from django.core.management import call_command
+        from io import StringIO
+
         try:
-            parser = CommerceMLParser(
-                url_1c=settings.COMMERCE_ML_URL,
-                username=settings.COMMERCE_ML_USER,
-                password=settings.COMMERCE_ML_PASSWORD
-            )
-            
-            success = parser.sync_all()
-            latest_log = SyncLog.objects.latest('started_at')
-            
+            out = StringIO()
+            call_command('parse_1c_xml', stdout=out)
+            output = out.getvalue()
+
             return Response({
-                'status': 'success' if success else 'error',
-                'log': SyncLogSerializer(latest_log).data
+                'status': 'success',
+                'output': output,
             })
         except Exception as e:
-            logger.error(f"Ошибка запуска синхронизации: {str(e)}")
+            logger.error(f"Ошибка синхронизации: {str(e)}")
             return Response({
                 'status': 'error',
                 'message': str(e)
