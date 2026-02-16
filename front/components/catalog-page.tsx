@@ -214,11 +214,13 @@ export function CatalogPage({ collection }: CatalogPageProps) {
             stickyVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           )}>
             <div className={cn("mx-auto max-w-[1200px] py-2.5 transition-all duration-300", paddingClass)}>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="mr-1 text-[13px] font-medium text-[#1A1A1A] shrink-0">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[13px] font-medium text-[#1A1A1A] shrink-0">
                   {activeCategoryName}
                 </span>
-                <FiltersRow compact />
+                <div className="shrink-0">
+                  <FiltersRow compact />
+                </div>
               </div>
             </div>
           </div>
