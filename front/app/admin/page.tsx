@@ -27,6 +27,7 @@ export default function AdminPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [activeTab, setActiveTab] = useState<"all" | "out_of_stock">("all")
   const [productImages, setProductImages] = useState<Array<{id: number; image_url: string}>>([])
   const [newImageUrl, setNewImageUrl] = useState("")
   const [isSaving, setIsSaving] = useState(false)
@@ -138,11 +139,14 @@ export default function AdminPage() {
     return null
   }
 
-  const filteredProducts = products.filter(
-    (p) =>
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.article.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+    const matchesTab =
+      activeTab === "all" ? p.total_stock > 0 : p.total_stock === 0
+    return matchesSearch && matchesTab
+  })
 
   const handleAddImage = async () => {
     if (!newImageUrl.trim() || !selectedProduct) return
@@ -288,6 +292,31 @@ export default function AdminPage() {
         <div className="grid gap-6 md:gap-8 lg:grid-cols-[350px,1fr]">
           {/* Left: Product List */}
           <div className="bg-white p-4 md:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+            <div className="mb-4 flex border-b border-[#E0E0E0]">
+              <button
+                onClick={() => setActiveTab("all")}
+                className={cn(
+                  "px-4 py-2.5 text-[12px] font-medium uppercase tracking-wide transition-colors",
+                  activeTab === "all"
+                    ? "border-b-2 border-black text-[#1A1A1A] -mb-px"
+                    : "text-[#999999] hover:text-[#666666]"
+                )}
+              >
+                В наличии
+              </button>
+              <button
+                onClick={() => setActiveTab("out_of_stock")}
+                className={cn(
+                  "px-4 py-2.5 text-[12px] font-medium uppercase tracking-wide transition-colors",
+                  activeTab === "out_of_stock"
+                    ? "border-b-2 border-black text-[#1A1A1A] -mb-px"
+                    : "text-[#999999] hover:text-[#666666]"
+                )}
+              >
+                Нет в наличии
+              </button>
+            </div>
+
             <div className="mb-6">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#999999]" />

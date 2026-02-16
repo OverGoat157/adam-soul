@@ -30,6 +30,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         category = self.request.query_params.get('category', None)
         search = self.request.query_params.get('search', None)
+        include_out_of_stock = self.request.query_params.get('include_out_of_stock', 'false').lower() == 'true'
+        only_out_of_stock = self.request.query_params.get('only_out_of_stock', 'false').lower() == 'true'
 
         if category and category != 'all':
             queryset = queryset.filter(category__slug=category)
@@ -39,6 +41,11 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(
                 Q(name__icontains=search) | Q(article__icontains=search)
             )
+
+        if only_out_of_stock:
+            queryset = queryset.filter(total_stock=0)
+        elif not include_out_of_stock:
+            queryset = queryset.filter(total_stock__gt=0)
 
         return queryset.select_related('category').prefetch_related('images', 'sizes')
     

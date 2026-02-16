@@ -104,9 +104,11 @@ export async function getProduct(id: number): Promise<Product | null> {
 }
 
 // ADMIN: Получить все товары для админки
-export async function getAllProducts(token: string): Promise<Product[]> {
+export async function getAllProducts(token: string, onlyOutOfStock = false): Promise<Product[]> {
   try {
-    const res = await fetch(`${API_URL}/products?include_hidden=true`, {
+    const params = new URLSearchParams({ include_hidden: 'true', include_out_of_stock: 'true' })
+    if (onlyOutOfStock) params.set('only_out_of_stock', 'true')
+    const res = await fetch(`${API_URL}/products?${params}`, {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store'
     })
