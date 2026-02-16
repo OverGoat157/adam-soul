@@ -76,8 +76,14 @@ DATABASE_URL="postgresql://${DB_USER}:${DB_PASS}@localhost/${DB_NAME}"
 
 # ---------- 3. Клонирование репозитория ----------
 echo "[3/8] Клонирование репозитория..."
-rm -rf "$APP_DIR"
-git clone "$GITHUB_REPO" "$APP_DIR"
+if [ -d "$APP_DIR/.git" ]; then
+    echo "  Репозиторий уже существует — делаем git pull..."
+    git -C "$APP_DIR" config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+    git -C "$APP_DIR" pull origin main
+else
+    rm -rf "$APP_DIR"
+    git clone "$GITHUB_REPO" "$APP_DIR"
+fi
 
 # ---------- 4. Виртуальное окружение ----------
 echo "[4/8] Установка зависимостей Python..."
