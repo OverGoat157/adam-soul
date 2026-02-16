@@ -239,15 +239,37 @@ def handle_deactivate():
 
 def handle_complete():
     """
-    Signal end of exchange. Clean up temp XML files (keep images).
+    Signal end of exchange.
+    Parse offers.xml in background (if present), then clean up temp XML files.
     """
-    if os.path.exists(EXCHANGE_DIR):
-        for dirpath, dirnames, filenames in os.walk(EXCHANGE_DIR):
-            for f in filenames:
-                try:
-                    os.remove(os.path.join(dirpath, f))
-                except OSError:
-                    pass
+    import threading
+    import django
 
-    logger.info("1C exchange: complete")
+    offers_path = os.path.join(EXCHANGE_DIR, 'offers.xml')
+
+    def parse_and_cleanup():
+        django.db.connection.close()
+        try:
+            if os.path.exists(offers_path):
+                logger.info("1C exchange: complete — parsing offers.xml in background")
+                sync_offers_from_file(offers_path)
+                merge_products_by_article()
+                logger.info("1C exchange: offers parsed and merged successfully")
+        except Exception as e:
+            logger.error(f"1C exchange: error parsing offers in complete: {e}")
+        finally:
+            # Clean up temp XML files after parsing
+            if os.path.exists(EXCHANGE_DIR):
+                for dirpath, dirnames, filenames in os.walk(EXCHANGE_DIR):
+                    for f in filenames:
+                        try:
+                            os.remove(os.path.join(dirpath, f))
+                        except OSError:
+                            pass
+            logger.info("1C exchange: temp files cleaned up")
+
+    thread = threading.Thread(target=parse_and_cleanup, daemon=True)
+    thread.start()
+
+    logger.info("1C exchange: complete — background parsing started")
     return make_response('success')
