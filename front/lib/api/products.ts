@@ -39,7 +39,7 @@ export interface SyncLog {
   id: number
   started_at: string
   finished_at: string | null
-  status: 'running' | 'success' | 'error'
+  status: 'running' | 'success' | 'error' | 'cancelled'
   products_synced: number
   categories_synced: number
   error_message: string
