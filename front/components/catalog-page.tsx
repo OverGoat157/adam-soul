@@ -21,6 +21,92 @@ interface CatalogPageProps {
 
 type PriceSort = "none" | "asc" | "desc"
 
+interface FiltersRowProps {
+  compact?: boolean
+  searchQuery: string
+  setSearchQuery: (v: string) => void
+  filterBS: boolean
+  setFilterBS: (v: boolean) => void
+  filterZidan: boolean
+  setFilterZidan: (v: boolean) => void
+  priceSort: PriceSort
+  cyclePriceSort: () => void
+}
+
+function FiltersRow({ compact = false, searchQuery, setSearchQuery, filterBS, setFilterBS, filterZidan, setFilterZidan, priceSort, cyclePriceSort }: FiltersRowProps) {
+  return (
+    <div className={cn("flex flex-wrap items-center gap-2", compact ? "" : "mt-4")}>
+      {/* Поиск */}
+      <div className={cn("relative", compact ? "min-w-[160px] flex-1 sm:max-w-[220px]" : "w-full sm:w-72")}>
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#999999]" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Поиск по названию или артикулу..."
+          className={cn(
+            "w-full border border-[#E0E0E0] bg-white pl-8 pr-7 text-[#1A1A1A] placeholder-[#BBBBBB] outline-none focus:border-[#999999] transition-colors",
+            compact ? "py-1.5 text-[12px]" : "py-2.5 text-[13px]"
+          )}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#1A1A1A] transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Фильтр BS */}
+      <button
+        onClick={() => setFilterBS(!filterBS)}
+        className={cn(
+          "px-3 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
+          compact ? "py-1.5" : "py-2",
+          filterBS
+            ? "bg-black text-white border-black"
+            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
+        )}
+      >
+        BS
+      </button>
+
+      {/* Фильтр Zidan */}
+      <button
+        onClick={() => setFilterZidan(!filterZidan)}
+        className={cn(
+          "px-3 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
+          compact ? "py-1.5" : "py-2",
+          filterZidan
+            ? "bg-black text-white border-black"
+            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
+        )}
+      >
+        Zidan
+      </button>
+
+      {/* Сортировка по цене */}
+      <button
+        onClick={cyclePriceSort}
+        className={cn(
+          "flex items-center gap-1.5 px-3 text-[11px] font-medium uppercase tracking-wide border transition-colors shrink-0",
+          compact ? "py-1.5" : "py-2",
+          priceSort !== 'none'
+            ? "bg-black text-white border-black"
+            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
+        )}
+      >
+        {priceSort === 'asc' && <ArrowUp className="h-3 w-3" />}
+        {priceSort === 'desc' && <ArrowDown className="h-3 w-3" />}
+        {priceSort === 'none' && <ArrowUpDown className="h-3 w-3" />}
+        Цена
+      </button>
+    </div>
+  )
+}
+
 export function CatalogPage({ collection }: CatalogPageProps) {
   const [activeCategory, setActiveCategory] = useState("all")
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -116,78 +202,7 @@ export function CatalogPage({ collection }: CatalogPageProps) {
     setPriceSort((prev) => prev === 'none' ? 'asc' : prev === 'asc' ? 'desc' : 'none')
   }
 
-  // Блок фильтров — используется и вверху страницы, и в sticky-баре
-  const FiltersRow = ({ compact = false }: { compact?: boolean }) => (
-    <div className={cn("flex flex-wrap items-center gap-2", compact ? "" : "mt-4")}>
-      {/* Поиск */}
-      <div className={cn("relative", compact ? "min-w-[160px] flex-1 sm:max-w-[220px]" : "w-full sm:w-72")}>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#999999]" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Поиск по названию или артикулу..."
-          className={cn(
-            "w-full border border-[#E0E0E0] bg-white pl-8 pr-7 text-[#1A1A1A] placeholder-[#BBBBBB] outline-none focus:border-[#999999] transition-colors",
-            compact ? "py-1.5 text-[12px]" : "py-2.5 text-[13px]"
-          )}
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#999999] hover:text-[#1A1A1A] transition-colors"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* Фильтр BS */}
-      <button
-        onClick={() => setFilterBS(!filterBS)}
-        className={cn(
-          "px-3 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
-          compact ? "py-1.5" : "py-2",
-          filterBS
-            ? "bg-black text-white border-black"
-            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
-        )}
-      >
-        BS
-      </button>
-
-      {/* Фильтр Zidan */}
-      <button
-        onClick={() => setFilterZidan(!filterZidan)}
-        className={cn(
-          "px-3 text-[11px] font-semibold uppercase tracking-wide border transition-colors shrink-0",
-          compact ? "py-1.5" : "py-2",
-          filterZidan
-            ? "bg-black text-white border-black"
-            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
-        )}
-      >
-        Zidan
-      </button>
-
-      {/* Сортировка по цене */}
-      <button
-        onClick={cyclePriceSort}
-        className={cn(
-          "flex items-center gap-1.5 px-3 text-[11px] font-medium uppercase tracking-wide border transition-colors shrink-0",
-          compact ? "py-1.5" : "py-2",
-          priceSort !== 'none'
-            ? "bg-black text-white border-black"
-            : "bg-white text-[#666666] border-[#E0E0E0] hover:border-[#999999]"
-        )}
-      >
-        {priceSort === 'asc' && <ArrowUp className="h-3 w-3" />}
-        {priceSort === 'desc' && <ArrowDown className="h-3 w-3" />}
-        {priceSort === 'none' && <ArrowUpDown className="h-3 w-3" />}
-        Цена
-      </button>
-    </div>
-  )
+  const filtersProps = { searchQuery, setSearchQuery, filterBS, setFilterBS, filterZidan, setFilterZidan, priceSort, cyclePriceSort }
 
   const paddingClass = sidebarOpen
     ? "px-6 md:px-10"
@@ -219,7 +234,7 @@ export function CatalogPage({ collection }: CatalogPageProps) {
                   {activeCategoryName}
                 </span>
                 <div className="shrink-0">
-                  <FiltersRow compact />
+                  <FiltersRow compact {...filtersProps} />
                 </div>
               </div>
             </div>
@@ -248,7 +263,7 @@ export function CatalogPage({ collection }: CatalogPageProps) {
 
                 {/* Поиск и фильтры справа от заголовка */}
                 <div className="shrink-0 md:pt-2">
-                  <FiltersRow />
+                  <FiltersRow {...filtersProps} />
                 </div>
               </div>
             </div>
