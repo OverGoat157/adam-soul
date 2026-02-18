@@ -196,6 +196,11 @@ export async function getSyncLogs(token: string): Promise<SyncLog[]> {
   return res.json()
 }
 
+// ADMIN: Отменить текущую синхронизацию
+export async function cancelSync(): Promise<void> {
+  await fetch(`${API_URL}/sync/cancel_sync`, { method: 'POST', cache: 'no-store' })
+}
+
 // ADMIN: Текущий статус синхронизации (для поллинга)
 export async function getSyncStatus(): Promise<SyncLog | null> {
   try {

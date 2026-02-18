@@ -15,6 +15,7 @@ import {
   deleteProductImage,
   toggleProductVisibility,
   triggerManualSync,
+  cancelSync,
   getSyncLogs,
   getSyncStatus,
   type Product,
@@ -129,6 +130,17 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Sync error:', error)
       alert('Ошибка при запуске синхронизации')
+    }
+  }
+
+  const handleCancelSync = async () => {
+    try {
+      await cancelSync()
+      setIsSyncing(false)
+      setCurrentSync(prev => prev ? { ...prev, status: 'cancelled', current_step: 'Отменено пользователем' } : null)
+      await loadSyncLogs()
+    } catch (e) {
+      console.error('Cancel sync error:', e)
     }
   }
 
@@ -290,7 +302,17 @@ export default function AdminPage() {
                   ? `Ошибка: ${currentSync.error_message || 'Неизвестная ошибка'}`
                   : currentSync.current_step || 'Синхронизация...'}
               </span>
-              <span className="text-[13px] text-[#999999]">{currentSync.progress}%</span>
+              <div className="flex items-center gap-4">
+                <span className="text-[13px] text-[#999999]">{currentSync.progress}%</span>
+                {isSyncing && (
+                  <button
+                    onClick={handleCancelSync}
+                    className="text-[12px] font-medium text-red-500 hover:text-red-700 transition-colors"
+                  >
+                    Отменить
+                  </button>
+                )}
+              </div>
             </div>
             <div className="h-1.5 w-full bg-[#F0F0F0] overflow-hidden">
               <div

@@ -158,7 +158,20 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def status(self, request):
         """Текущий статус синхронизации — последний лог."""
-        log = SyncLog.objects.first()
+        log = SyncLog.objects.order_by('-started_at').first()
         if not log:
             return Response({'status': 'idle'})
         return Response(SyncLogSerializer(log).data)
+
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def cancel_sync(self, request):
+        """Отменить текущую синхронизацию (помечает как cancelled)."""
+        from django.utils import timezone
+        updated = SyncLog.objects.filter(status='running').update(
+            status='cancelled',
+            finished_at=timezone.now(),
+            current_step='Отменено пользователем',
+        )
+        if updated:
+            return Response({'status': 'cancelled'})
+        return Response({'status': 'not_running'})
