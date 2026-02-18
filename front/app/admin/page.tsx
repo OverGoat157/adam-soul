@@ -318,7 +318,8 @@ export default function AdminPage() {
               <div
                 className={cn(
                   "h-full transition-all duration-500",
-                  currentSync.status === 'error' ? "bg-red-500" : "bg-black"
+                  currentSync.status === 'error' ? "bg-red-500" : "bg-black",
+                  isSyncing && currentSync.status === 'running' && "animate-pulse"
                 )}
                 style={{ width: `${currentSync.progress}%` }}
               />

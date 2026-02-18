@@ -443,8 +443,9 @@ def sync_offers_from_file(file_path, log_id=None):
     logger.info(f"total_stock обновлён для {updated_stock} товаров")
 
     # Update size-specific stock
-    _update_log(log_id, 90, f'Обновление размеров ({len(size_updates)} записей)...')
-    for prod_id_1c, size_value, stock in size_updates:
+    total_sizes = len(size_updates)
+    _update_log(log_id, 90, f'Обновление размеров ({total_sizes} записей)...')
+    for i, (prod_id_1c, size_value, stock) in enumerate(size_updates):
         try:
             product = Product.objects.get(id_1c=prod_id_1c)
             size_obj, _ = ProductSize.objects.get_or_create(
@@ -454,8 +455,12 @@ def sync_offers_from_file(file_path, log_id=None):
             size_obj.save()
         except Product.DoesNotExist:
             continue
+        # Обновляем прогресс каждые 5000 записей (90% → 94%)
+        if log_id and total_sizes > 0 and (i + 1) % 5000 == 0:
+            pct = 90 + min(4, int(4 * (i + 1) / total_sizes))
+            _update_log(log_id, pct, f'Обновление размеров {i + 1}/{total_sizes}...')
 
-    logger.info(f"Размеры обновлены: {len(size_updates)} записей")
+    logger.info(f"Размеры обновлены: {total_sizes} записей")
 
 
 def _extract_size_from_name(name):
