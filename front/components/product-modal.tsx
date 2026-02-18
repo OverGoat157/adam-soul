@@ -114,8 +114,6 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
   const canGoPrev = selectedImage > 0
   const canGoNext = selectedImage < product.images.length - 1
 
-  const selectedSizeData = product.sizes.find(s => s.size === selectedSize)
-
   // Извлекаем URLs из объектов изображений
   const imageUrls = product.images.map(img => img.image_url)
   const currentImageUrl = product.images[selectedImage]?.image_url || product.main_image
@@ -282,18 +280,7 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
                           "text-[15px]",
                           selectedSize ? "text-[#1A1A1A] font-medium" : "text-[#999999]"
                         )}>
-                          {selectedSize ? (
-                            <>
-                              Размер {selectedSize}
-                              {selectedSizeData && (
-                                <span className="ml-3 text-[#666666] font-normal">
-                                  — в наличии {selectedSizeData.stock} шт
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            "Выберите размер"
-                          )}
+                          {selectedSize ? `Размер ${selectedSize}` : "Выберите размер"}
                         </span>
                         <ChevronRight className={cn(
                           "h-5 w-5 text-[#999999] transition-transform duration-300",
@@ -309,38 +296,21 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
                           : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
                       )}>
                         <div className="max-h-[280px] overflow-y-auto scrollbar-hide">
-                          {product.sizes.map((sizeItem) => (
+                          {product.sizes.filter(s => s.stock > 0).map((sizeItem) => (
                             <button
                               key={sizeItem.size}
                               onClick={() => {
-                                if (sizeItem.stock > 0) {
-                                  setSelectedSize(sizeItem.size)
-                                  setIsDropdownOpen(false)
-                                }
+                                setSelectedSize(sizeItem.size)
+                                setIsDropdownOpen(false)
                               }}
-                              disabled={sizeItem.stock === 0}
                               className={cn(
-                                "flex w-full items-center justify-between px-5 py-4 text-left transition-colors duration-200",
-                                sizeItem.stock === 0
-                                  ? "cursor-not-allowed bg-[#FAFAFA] text-[#CCCCCC]"
-                                  : "hover:bg-[#F8F8F8]",
+                                "flex w-full items-center justify-between px-5 py-4 text-left transition-colors duration-200 hover:bg-[#F8F8F8]",
                                 selectedSize === sizeItem.size && "bg-[#F8F8F8]"
                               )}
                             >
-                              <div className="flex items-center gap-4">
-                                <span className={cn(
-                                  "text-[15px] font-medium",
-                                  sizeItem.stock === 0 ? "text-[#CCCCCC]" : "text-[#1A1A1A]"
-                                )}>
-                                  {sizeItem.size}
-                                </span>
-                                <span className={cn(
-                                  "text-[13px]",
-                                  sizeItem.stock > 0 ? "text-[#666666]" : "text-[#CCCCCC]"
-                                )}>
-                                  {sizeItem.stock > 0 ? `${sizeItem.stock} шт` : "нет в наличии"}
-                                </span>
-                              </div>
+                              <span className="text-[15px] font-medium text-[#1A1A1A]">
+                                {sizeItem.size}
+                              </span>
                               {selectedSize === sizeItem.size && (
                                 <Check className="h-4 w-4 text-black" strokeWidth={2} />
                               )}
