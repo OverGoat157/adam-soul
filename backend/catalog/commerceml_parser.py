@@ -428,39 +428,48 @@ def sync_offers_from_file(file_path, log_id=None):
 
     logger.info(f"Найдено {offer_count} предложений (streaming)")
 
-    # Bulk update prices
-    _update_log(log_id, 78, f'Найдено {offer_count} предложений. Обновление цен...')
-    updated_prices = 0
-    for prod_id_1c, price in product_prices.items():
-        updated_prices += Product.objects.filter(id_1c=prod_id_1c).update(price=price)
-    logger.info(f"Цены обновлены для {updated_prices} товаров")
+    # Fetch all products involved in one query, build id_1c → (pk, obj) map
+    all_ids_1c = set(product_prices.keys()) | set(product_total_stocks.keys()) | {r[0] for r in size_updates}
+    products_qs = Product.objects.filter(id_1c__in=all_ids_1c).only('id', 'id_1c', 'price', 'total_stock')
+    product_map = {p.id_1c: p for p in products_qs}
 
-    # Bulk update total_stock
-    _update_log(log_id, 85, f'Обновление остатков ({updated_prices} товаров)...')
-    updated_stock = 0
-    for prod_id_1c, total in product_total_stocks.items():
-        updated_stock += Product.objects.filter(id_1c=prod_id_1c).update(total_stock=total)
-    logger.info(f"total_stock обновлён для {updated_stock} товаров")
+    # Bulk update prices + total_stock in a single pass (2 queries total)
+    _update_log(log_id, 78, f'Найдено {offer_count} предложений. Обновление цен и остатков...')
+    to_update = []
+    for prod_id_1c, p in product_map.items():
+        changed = False
+        if prod_id_1c in product_prices:
+            p.price = product_prices[prod_id_1c]
+            changed = True
+        if prod_id_1c in product_total_stocks:
+            p.total_stock = product_total_stocks[prod_id_1c]
+            changed = True
+        if changed:
+            to_update.append(p)
+    if to_update:
+        Product.objects.bulk_update(to_update, ['price', 'total_stock'])
+    logger.info(f"Цены и остатки обновлены для {len(to_update)} товаров")
 
-    # Update size-specific stock
+    # Bulk update size-specific stock (3 queries total regardless of size count)
     total_sizes = len(size_updates)
     _update_log(log_id, 90, f'Обновление размеров ({total_sizes} записей)...')
-    for i, (prod_id_1c, size_value, stock) in enumerate(size_updates):
-        try:
-            product = Product.objects.get(id_1c=prod_id_1c)
-            size_obj, _ = ProductSize.objects.get_or_create(
-                product=product, size=size_value
-            )
-            size_obj.stock = stock
-            size_obj.save()
-        except Product.DoesNotExist:
-            continue
-        # Обновляем прогресс каждые 5000 записей (90% → 94%)
-        if log_id and total_sizes > 0 and (i + 1) % 5000 == 0:
-            pct = 90 + min(4, int(4 * (i + 1) / total_sizes))
-            _update_log(log_id, pct, f'Обновление размеров {i + 1}/{total_sizes}...')
 
-    logger.info(f"Размеры обновлены: {total_sizes} записей")
+    # Deduplicate: last value wins per (product_pk, size)
+    size_map = {}  # (product_pk, size_value) -> stock
+    for prod_id_1c, size_value, stock in size_updates:
+        p = product_map.get(prod_id_1c)
+        if p:
+            size_map[(p.id, size_value)] = stock
+
+    if size_map:
+        affected_pks = list({pk for pk, _ in size_map.keys()})
+        ProductSize.objects.filter(product_id__in=affected_pks).delete()
+        ProductSize.objects.bulk_create([
+            ProductSize(product_id=pk, size=size_value, stock=stock)
+            for (pk, size_value), stock in size_map.items()
+        ])
+
+    logger.info(f"Размеры обновлены: {len(size_map)} записей")
 
 
 # ============================================================
