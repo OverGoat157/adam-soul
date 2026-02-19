@@ -494,10 +494,19 @@ def merge_products_by_article(log_id=None):
         image_count=Count('images')
     ).order_by('-image_count', '-total_stock', 'id')
 
+    def _merge_key(product):
+        """Products with BS or ZIDAN in name get a separate group key."""
+        name_lower = product.name.lower()
+        if ' bs' in name_lower or name_lower.endswith(' bs'):
+            return product.article + '|BS'
+        if 'zidan' in name_lower:
+            return product.article + '|ZIDAN'
+        return product.article
+
     groups = defaultdict(list)
     for p in products:
         if p.article:
-            groups[p.article].append(p)
+            groups[_merge_key(p)].append(p)
 
     _update_log(log_id, 95, 'Объединение дублей по артикулу...')
     merged_count = 0
@@ -505,6 +514,10 @@ def merge_products_by_article(log_id=None):
 
     for article, prods in groups.items():
         if len(prods) <= 1:
+            # Single product in group — make sure it's not hidden from a previous merge
+            if prods and prods[0].is_hidden:
+                prods[0].is_hidden = False
+                prods[0].save(update_fields=['is_hidden'])
             continue
 
         main = prods[0]  # most images, then highest stock
