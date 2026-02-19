@@ -191,9 +191,9 @@ def handle_import(request):
             log.products_synced = prod_count
             logger.info(f"1C exchange: imported {cat_count} categories, {prod_count} products")
         elif 'offers' in safe_filename.lower():
-            # offers.xml is large (80+ MB) — processing is deferred to handle_complete
-            # which runs sync_offers_from_file in a background thread to avoid 504 timeouts.
-            logger.info("1C exchange: offers.xml received, processing deferred to complete step")
+            # offers.xml — bulk operations make this fast (~20-30s), process synchronously
+            sync_offers_from_file(file_path, log_id=log.id)
+            logger.info("1C exchange: offers.xml processed (prices, stock, sizes updated)")
         else:
             # Try to detect content from XML structure
             tree = ET.parse(file_path)
@@ -239,50 +239,19 @@ def handle_deactivate():
 
 def handle_complete():
     """
-    Signal end of exchange.
-    Parse offers.xml in background (if present), then clean up temp XML files.
+    Signal end of exchange. Clean up temp XML files.
+    offers.xml is already processed synchronously in handle_import.
     """
-    import threading
-    import django
+    logger.info("1C exchange: complete")
 
-    offers_path = os.path.join(EXCHANGE_DIR, 'offers.xml')
+    # Clean up temp XML files
+    if os.path.exists(EXCHANGE_DIR):
+        for dirpath, dirnames, filenames in os.walk(EXCHANGE_DIR):
+            for f in filenames:
+                try:
+                    os.remove(os.path.join(dirpath, f))
+                except OSError:
+                    pass
+    logger.info("1C exchange: temp files cleaned up")
 
-    log = SyncLog.objects.create(status='running', current_step='Запуск парсинга...')
-
-    def parse_and_cleanup():
-        django.db.connection.close()
-        try:
-            if os.path.exists(offers_path):
-                logger.info("1C exchange: complete — parsing offers.xml in background")
-                sync_offers_from_file(offers_path, log_id=log.id)
-                SyncLog.objects.filter(id=log.id).update(
-                    status='success',
-                    progress=100,
-                    current_step='Синхронизация завершена',
-                    finished_at=timezone.now(),
-                )
-                logger.info("1C exchange: offers parsed and merged successfully")
-        except Exception as e:
-            logger.error(f"1C exchange: error parsing offers in complete: {e}")
-            SyncLog.objects.filter(id=log.id).update(
-                status='error',
-                error_message=str(e),
-                current_step=f'Ошибка: {str(e)[:200]}',
-                finished_at=timezone.now(),
-            )
-        finally:
-            # Clean up temp XML files after parsing
-            if os.path.exists(EXCHANGE_DIR):
-                for dirpath, dirnames, filenames in os.walk(EXCHANGE_DIR):
-                    for f in filenames:
-                        try:
-                            os.remove(os.path.join(dirpath, f))
-                        except OSError:
-                            pass
-            logger.info("1C exchange: temp files cleaned up")
-
-    thread = threading.Thread(target=parse_and_cleanup, daemon=True)
-    thread.start()
-
-    logger.info("1C exchange: complete — background parsing started")
     return make_response('success')
