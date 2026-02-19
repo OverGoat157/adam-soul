@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from .models import SyncLog
-from .commerceml_parser import sync_categories_from_tree, sync_products_from_tree, sync_offers_from_file, merge_products_by_article
+from .commerceml_parser import sync_categories_from_tree, sync_products_from_tree, sync_offers_from_file
 
 logger = logging.getLogger(__name__)
 
@@ -191,10 +191,9 @@ def handle_import(request):
             log.products_synced = prod_count
             logger.info(f"1C exchange: imported {cat_count} categories, {prod_count} products")
         elif 'offers' in safe_filename.lower():
-            # offers.xml — use streaming parser (memory-efficient for large files)
-            sync_offers_from_file(file_path)
-            merge_products_by_article()
-            logger.info("1C exchange: imported offers (prices and stock), merged by article")
+            # offers.xml is large (80+ MB) — processing is deferred to handle_complete
+            # which runs sync_offers_from_file in a background thread to avoid 504 timeouts.
+            logger.info("1C exchange: offers.xml received, processing deferred to complete step")
         else:
             # Try to detect content from XML structure
             tree = ET.parse(file_path)
@@ -212,6 +211,7 @@ def handle_import(request):
 
             if offers_package is not None:
                 sync_offers_from_file(file_path)
+                # Note: no merge_products_by_article — merging is disabled
 
         log.status = 'success'
         log.finished_at = timezone.now()
@@ -255,7 +255,6 @@ def handle_complete():
             if os.path.exists(offers_path):
                 logger.info("1C exchange: complete — parsing offers.xml in background")
                 sync_offers_from_file(offers_path, log_id=log.id)
-                merge_products_by_article(log_id=log.id)
                 SyncLog.objects.filter(id=log.id).update(
                     status='success',
                     progress=100,
