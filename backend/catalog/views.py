@@ -115,7 +115,17 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
         from django.core.management import call_command
         from django.utils import timezone
 
-        # Check if sync is already running
+        # Mark stale 'running' logs (older than 10 min) as error — they crashed silently
+        from django.utils import timezone as tz
+        import datetime
+        stale_cutoff = tz.now() - datetime.timedelta(minutes=10)
+        SyncLog.objects.filter(status='running', started_at__lt=stale_cutoff).update(
+            status='error',
+            error_message='Синхронизация прервана (превышено время ожидания)',
+            finished_at=tz.now(),
+        )
+
+        # Check if sync is already running (recently started)
         running = SyncLog.objects.filter(status='running').first()
         if running:
             return Response({
