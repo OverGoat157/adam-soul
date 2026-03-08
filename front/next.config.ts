@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const VPS = "http://5.129.221.75";
+const VPS = "http://168.222.192.21";
 
 const nextConfig: NextConfig = {
   images: {
@@ -19,7 +19,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'http',
-        hostname: '5.129.221.75',
+        hostname: '168.222.192.21',
         port: '',
         pathname: '/**',
       },

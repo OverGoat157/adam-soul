@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================
-# Adam Soul — скрипт деплоя на Ubuntu 22.04 (Timeweb Cloud)
+# Adam Soul — скрипт деплоя на Ubuntu 24.04 (Рег.Облако)
 # Запускать от root: bash deploy.sh
 # =============================================================
 
@@ -35,17 +35,6 @@ read -p "Нажмите Enter для продолжения..."
 # ---------- 1. Системные пакеты ----------
 echo ""
 echo "[1/8] Установка системных пакетов..."
-
-# Исправляем зеркало apt — заменяем кастомные зеркала на официальные Ubuntu
-# (на Timeweb Cloud mirror.timeweb.ru может не резолвиться)
-if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-    # Ubuntu 24.04+ (DEB822 format)
-    sed -i 's|http://mirror\.timeweb\.ru/ubuntu|http://archive.ubuntu.com/ubuntu|g' \
-        /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-elif [ -f /etc/apt/sources.list ]; then
-    sed -i 's|http://mirror\.timeweb\.ru/ubuntu|http://archive.ubuntu.com/ubuntu|g' \
-        /etc/apt/sources.list 2>/dev/null || true
-fi
 
 apt-get update -qq
 apt-get install -y -qq \
@@ -99,9 +88,9 @@ cat > "$APP_DIR/backend/.env" << EOF
 SECRET_KEY=${SECRET_KEY}
 DEBUG=False
 DATABASE_URL=${DATABASE_URL}
-ALLOWED_HOSTS=5.129.221.75${DOMAIN:+,$DOMAIN}
-CORS_ALLOWED_ORIGINS=https://front-navy-nine.vercel.app,http://5.129.221.75
-SITE_URL=http://5.129.221.75${DOMAIN:+,https://$DOMAIN}
+ALLOWED_HOSTS=168.222.192.21${DOMAIN:+,$DOMAIN}
+CORS_ALLOWED_ORIGINS=https://front-navy-nine.vercel.app,http://168.222.192.21
+SITE_URL=http://168.222.192.21${DOMAIN:+,https://$DOMAIN}
 DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME}
 DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD}
 DJANGO_SUPERUSER_EMAIL=1c@internal.local
@@ -164,7 +153,7 @@ rm -f /etc/nginx/sites-enabled/default
 cat > /etc/nginx/sites-available/adamsoul << EOF
 server {
     listen 80;
-    server_name 5.129.221.75${DOMAIN:+ $DOMAIN www.$DOMAIN};
+    server_name 168.222.192.21${DOMAIN:+ $DOMAIN www.$DOMAIN};
 
     client_max_body_size 100M;
 
@@ -207,9 +196,9 @@ echo "======================================"
 echo "  Деплой завершён успешно!"
 echo "======================================"
 echo ""
-echo "  Сайт доступен: http://5.129.221.75"
-echo "  Django Admin:  http://5.129.221.75/admin/"
-echo "  1C endpoint:   http://5.129.221.75/1c_exchange/"
+echo "  Сайт доступен: http://168.222.192.21"
+echo "  Django Admin:  http://168.222.192.21/admin/"
+echo "  1C endpoint:   http://168.222.192.21/1c_exchange/"
 echo ""
 echo "  Логин для 1С:  $DJANGO_SUPERUSER_USERNAME"
 echo "  Пароль для 1С: $DJANGO_SUPERUSER_PASSWORD"
