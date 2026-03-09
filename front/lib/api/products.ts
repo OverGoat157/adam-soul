@@ -73,9 +73,9 @@ export async function getProducts(category: string = 'all', collection?: string,
     if (category !== 'all') params.append('category', category)
     if (collection) params.append('collection', collection)
     if (search) params.append('search', search)
+    params.append('grouped', 'true')
 
-    const query = params.toString()
-    const res = await fetch(`${API_URL}/products${query ? '?' + query : ''}`, {
+    const res = await fetch(`${API_URL}/products?${params.toString()}`, {
       next: { revalidate: search ? 0 : 900 }
     })
     if (!res.ok) return []

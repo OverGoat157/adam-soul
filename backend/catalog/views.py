@@ -20,14 +20,14 @@ class ProductViewSet(viewsets.ModelViewSet):
     """API для товаров"""
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-    
+
     def get_queryset(self):
         queryset = Product.objects.filter(is_active=True)
-        
+
         # Показывать скрытые только админам
         if not (self.request.user and self.request.user.is_staff):
             queryset = queryset.filter(is_hidden=False)
-        
+
         category = self.request.query_params.get('category', None)
         search = self.request.query_params.get('search', None)
         include_out_of_stock = self.request.query_params.get('include_out_of_stock', 'false').lower() == 'true'
@@ -48,6 +48,62 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(total_stock__gt=0)
 
         return queryset.select_related('category').prefetch_related('images', 'sizes')
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        grouped_param = request.query_params.get('grouped', 'false').lower() == 'true'
+
+        if not grouped_param:
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data)
+
+        # Группировка по артикулу
+        from collections import defaultdict
+        by_article = defaultdict(list)
+        for product in queryset:
+            by_article[product.article].append(product)
+
+        result = []
+        for article, products in by_article.items():
+            if len(products) == 1:
+                result.append(ProductSerializer(products[0]).data)
+                continue
+
+            # Карта размеров для каждого товара (только с остатком > 0)
+            product_size_maps = []
+            for p in products:
+                size_map = {s.size: s.stock for s in p.sizes.all() if s.stock > 0}
+                product_size_maps.append(size_map)
+
+            # Пересечение — размеры где ВСЕ компоненты имеют остаток
+            common_sizes = set(product_size_maps[0].keys())
+            for sm in product_size_maps[1:]:
+                common_sizes &= set(sm.keys())
+
+            # Объединённая карточка с пересечением размеров
+            if common_sizes:
+                base = ProductSerializer(products[0]).data
+                base['sizes'] = [
+                    {'size': size, 'stock': min(sm.get(size, 0) for sm in product_size_maps)}
+                    for size in sorted(common_sizes)
+                ]
+                base['total_stock'] = sum(s['stock'] for s in base['sizes'])
+                base['price'] = str(max(p.price for p in products))
+                result.append(base)
+
+            # Остатки — размеры каждого товара которых нет в пересечении
+            for p, size_map in zip(products, product_size_maps):
+                remainder = {sz: st for sz, st in size_map.items() if sz not in common_sizes}
+                if remainder:
+                    data = ProductSerializer(p).data
+                    data['sizes'] = [
+                        {'size': sz, 'stock': st}
+                        for sz, st in sorted(remainder.items())
+                    ]
+                    data['total_stock'] = sum(remainder.values())
+                    result.append(data)
+
+        return Response(result)
     
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def add_image(self, request, pk=None):
