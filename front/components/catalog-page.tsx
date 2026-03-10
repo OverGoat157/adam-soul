@@ -111,9 +111,7 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   const [activeCategory, setActiveCategory] = useState("all")
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
-  )
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [filterBS, setFilterBS] = useState(false)
@@ -124,6 +122,13 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   const [categories, setCategories] = useState<Category[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+
+  // На десктопе открываем сайдбар после монтирования (избегаем hydration mismatch)
+  useEffect(() => {
+    if (window.innerWidth >= 768) {
+      setSidebarOpen(true)
+    }
+  }, [])
 
   // Ref на секцию с большим заголовком — sticky появляется когда она уходит вверх
   const headerSectionRef = useRef<HTMLDivElement>(null)
