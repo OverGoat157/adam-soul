@@ -1,6 +1,6 @@
 "use client"
 
-import { Menu, X } from "lucide-react"
+import { ChevronRight, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Category } from "@/lib/api/products"
 
@@ -99,20 +99,25 @@ export function CategorySidebar({
         </div>
       </aside>
 
-      {/* Toggle Button */}
+      {/* Toggle Button — mobile: bottom-left arrow, desktop: top-left */}
       <button
         onClick={onToggle}
         className={cn(
-          "fixed z-[1001] flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center bg-white border border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
-          "top-[88px] md:top-[100px]",
-          isOpen ? "left-[272px] md:left-[272px]" : "left-2 sm:left-4"
+          "fixed z-[1001] flex items-center justify-center bg-white border border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
+          // Mobile: bottom-left round pill
+          "bottom-6 left-3 h-10 w-10 rounded-full md:rounded-none",
+          // Desktop: top-left square
+          "md:bottom-auto md:top-[100px] md:h-11 md:w-11",
+          isOpen
+            ? "left-[272px] md:left-[272px]"
+            : "left-3 md:left-4"
         )}
         aria-label={isOpen ? "Скрыть категории" : "Показать категории"}
       >
         {isOpen ? (
           <X className="h-5 w-5 text-[#666666]" />
         ) : (
-          <Menu className="h-5 w-5 text-[#666666]" />
+          <ChevronRight className="h-5 w-5 text-[#666666]" />
         )}
       </button>
     </>
