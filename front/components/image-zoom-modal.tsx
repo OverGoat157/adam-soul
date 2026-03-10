@@ -79,7 +79,7 @@ export function ImageZoomModal({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-[19998] flex items-center justify-center p-5 transition-opacity duration-300",
+        "fixed inset-0 z-[19998] flex items-center justify-center p-2 sm:p-5 transition-opacity duration-300",
         isVisible ? "opacity-100" : "opacity-0"
       )}
       onClick={handleOverlayClick}
@@ -99,7 +99,7 @@ export function ImageZoomModal({
       {/* Close Button - Square style */}
       <button
         onClick={() => onOpenChange(false)}
-        className="fixed right-5 top-5 z-[20000] flex h-12 w-12 items-center justify-center bg-white text-[#666666] shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-300 hover:bg-black hover:text-white"
+        className="fixed right-2 top-2 z-[20000] flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center bg-white text-[#666666] shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-300 hover:bg-black hover:text-white sm:right-5 sm:top-5"
         aria-label="Закрыть"
       >
         <X className="h-5 w-5" strokeWidth={1.5} />
@@ -109,7 +109,7 @@ export function ImageZoomModal({
       {canGoPrev && (
         <button
           onClick={() => onImageChange(currentIndex - 1)}
-          className="fixed left-5 top-1/2 z-[20000] flex h-12 w-12 -translate-y-1/2 items-center justify-center bg-white/90 text-[#1A1A1A] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all duration-300 hover:bg-white md:left-8 md:h-14 md:w-14"
+          className="fixed left-1 top-1/2 z-[20000] flex h-9 w-9 -translate-y-1/2 items-center justify-center bg-white/90 text-[#1A1A1A] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all duration-300 hover:bg-white sm:left-5 sm:h-12 sm:w-12 md:left-8 md:h-14 md:w-14"
           aria-label="Предыдущее изображение"
         >
           <ChevronLeft className="h-6 w-6" strokeWidth={1.5} />
@@ -119,7 +119,7 @@ export function ImageZoomModal({
       {canGoNext && (
         <button
           onClick={() => onImageChange(currentIndex + 1)}
-          className="fixed right-5 top-1/2 z-[20000] flex h-12 w-12 -translate-y-1/2 items-center justify-center bg-white/90 text-[#1A1A1A] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all duration-300 hover:bg-white md:right-8 md:h-14 md:w-14"
+          className="fixed right-1 top-1/2 z-[20000] flex h-9 w-9 -translate-y-1/2 items-center justify-center bg-white/90 text-[#1A1A1A] shadow-[0_4px_20px_rgba(0,0,0,0.2)] transition-all duration-300 hover:bg-white sm:right-5 sm:h-12 sm:w-12 md:right-8 md:h-14 md:w-14"
           aria-label="Следующее изображение"
         >
           <ChevronRight className="h-6 w-6" strokeWidth={1.5} />
@@ -129,7 +129,7 @@ export function ImageZoomModal({
       {/* Image Container */}
       <div
         className={cn(
-          "relative z-[19999] max-h-[90vh] max-w-[90vw] transition-all duration-500 ease-out",
+          "relative z-[19999] h-[90vh] w-[96vw] sm:w-[90vw] sm:max-w-[900px] transition-all duration-500 ease-out",
           isVisible
             ? "opacity-100 scale-100"
             : "opacity-0 scale-95"
@@ -139,9 +139,9 @@ export function ImageZoomModal({
         <Image
           src={images[currentIndex] || "/placeholder.svg"}
           alt={`Изображение ${currentIndex + 1} из ${images.length}`}
-          width={1200}
-          height={1600}
-          className="max-h-[90vh] w-auto object-contain shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+          fill
+          className="object-contain drop-shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+          sizes="(max-width: 640px) 96vw, 90vw"
           priority
         />
       </div>

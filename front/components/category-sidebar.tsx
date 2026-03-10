@@ -103,9 +103,9 @@ export function CategorySidebar({
       <button
         onClick={onToggle}
         className={cn(
-          "fixed z-[1001] flex h-11 w-11 items-center justify-center bg-white border border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
-          "top-[100px]",
-          isOpen ? "left-[272px] md:left-[272px]" : "left-4"
+          "fixed z-[1001] flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center bg-white border border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-all duration-500 hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)]",
+          "top-[88px] md:top-[100px]",
+          isOpen ? "left-[272px] md:left-[272px]" : "left-2 sm:left-4"
         )}
         aria-label={isOpen ? "Скрыть категории" : "Показать категории"}
       >
