@@ -205,8 +205,8 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   const filtersProps = { searchQuery, setSearchQuery, filterBS, setFilterBS, filterZidan, setFilterZidan, priceSort, cyclePriceSort }
 
   const paddingClass = sidebarOpen
-    ? "px-6 md:px-10"
-    : "px-6 md:pl-[68px] md:pr-[68px]"
+    ? "px-3 sm:px-6 md:px-10"
+    : "px-3 sm:px-6 md:pl-[68px] md:pr-[68px]"
 
   return (
     <div className="min-h-screen bg-white">
@@ -228,9 +228,9 @@ export function CatalogPage({ collection }: CatalogPageProps) {
             "sticky top-[80px] z-20 bg-white border-b border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200",
             stickyVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           )}>
-            <div className={cn("mx-auto max-w-[1200px] py-2.5 transition-all duration-300", paddingClass)}>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-[13px] font-medium text-[#1A1A1A] shrink-0">
+            <div className={cn("mx-auto max-w-[1200px] py-2 sm:py-2.5 transition-all duration-300", paddingClass)}>
+              <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide sm:justify-between sm:gap-4">
+                <span className="hidden text-[13px] font-medium text-[#1A1A1A] shrink-0 sm:block">
                   {activeCategoryName}
                 </span>
                 <div className="shrink-0">
@@ -243,13 +243,13 @@ export function CatalogPage({ collection }: CatalogPageProps) {
           <div className={cn("mx-auto max-w-[1200px] pb-16 transition-all duration-300", paddingClass)}>
 
             {/* Большой заголовок + фильтры справа */}
-            <div ref={headerSectionRef} className="mb-10 mt-14 md:mb-12 md:mt-16">
+            <div ref={headerSectionRef} className="mb-6 mt-8 sm:mb-10 sm:mt-14 md:mb-12 md:mt-16">
               <p className="mb-3 text-[11px] font-medium uppercase tracking-[4px] text-[#999999]">
                 Каталог
               </p>
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <h1 className="text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
+                  <h1 className="text-[24px] sm:text-[32px] md:text-[38px] font-light text-[#1A1A1A] tracking-tight">
                     {activeCategoryName}
                   </h1>
                   <p className="mt-3 text-[15px] text-[#666666]">

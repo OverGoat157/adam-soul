@@ -122,7 +122,7 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
     <>
       <div
         className={cn(
-          "fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto p-4 md:p-8 transition-opacity duration-300",
+          "fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto p-0 sm:p-4 md:p-8 transition-opacity duration-300",
           isVisible ? "opacity-100" : "opacity-0"
         )}
         onClick={handleOverlayClick}
@@ -142,18 +142,18 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
         {/* Modal Container */}
         <div
           className={cn(
-            "relative z-[10000] m-auto w-full max-w-[1100px] transition-all duration-500 ease-out",
+            "relative z-[10000] m-auto w-full max-w-[1100px] h-full sm:h-auto transition-all duration-500 ease-out",
             isVisible
               ? "opacity-100 scale-100 translate-y-0"
               : "opacity-0 scale-95 translate-y-4"
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="bg-white shadow-[0_32px_80px_rgba(0,0,0,0.25)]">
+          <div className="bg-white shadow-[0_32px_80px_rgba(0,0,0,0.25)] h-full sm:h-auto overflow-y-auto sm:overflow-visible">
             {/* Close Button */}
             <button
               onClick={() => onOpenChange(false)}
-              className="absolute right-4 top-4 z-20 flex h-12 w-12 items-center justify-center bg-white text-[#666666] shadow-[0_4px_20px_rgba(0,0,0,0.15)] transition-all duration-300 hover:bg-black hover:text-white md:right-6 md:top-6"
+              className="absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center bg-white text-[#666666] shadow-[0_4px_20px_rgba(0,0,0,0.15)] transition-all duration-300 hover:bg-black hover:text-white sm:right-4 sm:top-4 sm:h-12 sm:w-12 md:right-6 md:top-6"
               aria-label="Закрыть"
             >
               <X className="h-5 w-5" strokeWidth={1.5} />
@@ -161,10 +161,10 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
 
             <div className="flex flex-col lg:flex-row">
               {/* Left Column - Main Image + Thumbnails Below */}
-              <div className="relative flex flex-col bg-[#F8F8F8] p-5 lg:w-[55%] lg:p-8">
+              <div className="relative flex flex-col bg-[#F8F8F8] p-2 sm:p-5 lg:w-[55%] lg:p-8">
                 {/* Main Image */}
                 <div
-                  className="relative aspect-[3/4] max-h-[60vh] cursor-zoom-in overflow-hidden bg-[#F0F0F0] lg:max-h-[70vh]"
+                  className="relative aspect-[3/4] max-h-[45vh] cursor-zoom-in overflow-hidden bg-[#F0F0F0] sm:max-h-[60vh] lg:max-h-[70vh]"
                   onClick={() => setZoomOpen(true)}
                 >
                   <Image
@@ -235,17 +235,17 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
               </div>
 
               {/* Right Column - Info */}
-              <div className="relative max-h-[50vh] overflow-y-auto p-6 lg:w-[45%] lg:max-h-[85vh] lg:p-10 lg:pl-8 scrollbar-hide">
+              <div className="relative overflow-y-auto p-4 sm:p-6 sm:max-h-[50vh] lg:w-[45%] lg:max-h-[85vh] lg:p-10 lg:pl-8 scrollbar-hide">
                 {/* Article */}
-                <p className="mb-4 text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
+                <p className="mb-2 sm:mb-4 text-[10px] sm:text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
                   Артикул: {product.article}
                 </p>
 
                 {/* Name with Favorite Button */}
-                <div className="mb-6 flex items-start gap-4">
+                <div className="mb-4 sm:mb-6 flex items-start gap-3 sm:gap-4">
                   <h2
                     id="modal-title"
-                    className="flex-1 text-[26px] md:text-[32px] font-light leading-tight tracking-tight text-[#1A1A1A]"
+                    className="flex-1 text-[20px] sm:text-[26px] md:text-[32px] font-light leading-tight tracking-tight text-[#1A1A1A]"
                   >
                     {product.name}
                   </h2>
@@ -256,14 +256,14 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
                 </div>
 
                 {/* Price */}
-                <p className="mb-10 text-[36px] md:text-[42px] font-light text-black tracking-tight">
+                <p className="mb-6 sm:mb-10 text-[28px] sm:text-[36px] md:text-[42px] font-light text-black tracking-tight">
                   {formatPrice(product.price)}
                 </p>
 
                 {/* Size Selector - Custom Premium Dropdown */}
                 {product.sizes && product.sizes.length > 0 && (
-                  <div className="mb-10">
-                    <p className="mb-4 text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
+                  <div className="mb-6 sm:mb-10">
+                    <p className="mb-3 sm:mb-4 text-[10px] sm:text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
                       Размер
                     </p>
 
@@ -271,7 +271,7 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
                       <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className={cn(
-                          "flex h-14 w-full items-center justify-between bg-[#F8F8F8] px-5 text-left transition-all duration-300",
+                          "flex h-11 sm:h-14 w-full items-center justify-between bg-[#F8F8F8] px-4 sm:px-5 text-left transition-all duration-300",
                           isDropdownOpen && "bg-[#F0F0F0]",
                           selectedSize && "bg-white border border-black"
                         )}
@@ -324,7 +324,7 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
 
                 {/* Description */}
                 {product.description && (
-                  <div className="border-t border-[#F0F0F0] pt-8">
+                  <div className="border-t border-[#F0F0F0] pt-5 sm:pt-8">
                     <p className="mb-4 text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
                       Описание
                     </p>
@@ -335,7 +335,7 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
                 )}
 
                 {/* Additional Info */}
-                <div className="mt-10 grid grid-cols-2 gap-6 border-t border-[#F0F0F0] pt-8">
+                <div className="mt-6 sm:mt-10 grid grid-cols-2 gap-4 sm:gap-6 border-t border-[#F0F0F0] pt-6 sm:pt-8">
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-[2px] text-[#999999] mb-2">
                       Доставка

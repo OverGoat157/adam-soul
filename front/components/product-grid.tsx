@@ -18,7 +18,7 @@ export function ProductGrid({ products, onProductClick }: ProductGridProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-10 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 px-1 sm:grid-cols-2 sm:gap-6 md:gap-10 lg:grid-cols-3 lg:px-0">
       {products.map((product, index) => (
         <div
           key={product.id}
