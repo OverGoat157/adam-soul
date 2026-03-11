@@ -1,7 +1,7 @@
 import React from "react"
 import type { Metadata } from 'next'
 import { Montserrat } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+
 import { AuthProvider } from "@/contexts/auth-context"
 import { FavoritesProvider } from "@/contexts/favorites-context"
 import './globals.css'
@@ -31,7 +31,7 @@ export default function RootLayout({
             {children}
           </FavoritesProvider>
         </AuthProvider>
-        <Analytics />
+
       </body>
     </html>
   )

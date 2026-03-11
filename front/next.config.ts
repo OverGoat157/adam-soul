@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 
-const VPS = "http://168.222.192.21";
+const BACKEND = process.env.BACKEND_URL || "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -23,17 +24,29 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '8000',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'catalog.adamsoul.ru',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: `${VPS}/api/:path*`,
+        destination: `${BACKEND}/api/:path*`,
       },
       {
         source: '/media/:path*',
-        destination: `${VPS}/media/:path*`,
+        destination: `${BACKEND}/media/:path*`,
       },
     ];
   },
