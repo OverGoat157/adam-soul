@@ -5,6 +5,7 @@ const BACKEND = process.env.BACKEND_URL || "http://127.0.0.1:8000";
 const nextConfig: NextConfig = {
   output: 'standalone',
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -43,10 +44,6 @@ const nextConfig: NextConfig = {
       {
         source: '/api/:path*',
         destination: `${BACKEND}/api/:path*`,
-      },
-      {
-        source: '/media/:path*',
-        destination: `${BACKEND}/media/:path*`,
       },
     ];
   },
