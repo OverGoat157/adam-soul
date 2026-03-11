@@ -276,11 +276,11 @@ export function CatalogPage({ collection }: CatalogPageProps) {
 
           {/* Sticky-бар — появляется когда заголовок уходит вверх */}
           <div className={cn(
-            "sticky top-[80px] z-20 bg-white border-b border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200",
+            "sticky top-[80px] z-20 bg-white border-b border-[#F0F0F0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 overflow-visible",
             stickyVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           )}>
             <div className={cn("mx-auto max-w-[1200px] py-2 sm:py-2.5 transition-all duration-300", paddingClass)}>
-              <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide sm:justify-between sm:gap-4">
+              <div className="flex items-center gap-3 overflow-visible sm:justify-between sm:gap-4">
                 <span className="hidden text-[13px] font-medium text-[#1A1A1A] shrink-0 sm:block">
                   {activeCategoryName}
                 </span>
