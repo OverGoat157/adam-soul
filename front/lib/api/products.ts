@@ -156,10 +156,14 @@ export async function reorderImages(
 }
 
 // ADMIN: Удалить изображение
-export async function deleteProductImage(imageId: number, token: string): Promise<void> {
-  const res = await fetch(`${API_URL}/product-images/${imageId}`, {
+export async function deleteProductImage(productId: number, imageId: number, token: string): Promise<void> {
+  const res = await fetch(`${API_URL}/products/${productId}/delete_image`, {
     method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ image_id: imageId })
   })
   if (!res.ok) throw new Error('Failed to delete image')
 }

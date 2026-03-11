@@ -201,10 +201,11 @@ export default function AdminPage() {
 
   const handleRemoveImage = async (imageId: number) => {
     if (!confirm('Удалить это изображение?')) return
+    if (!selectedProduct) return
 
     try {
       const token = localStorage.getItem('admin_token') || ''
-      await deleteProductImage(imageId, token)
+      await deleteProductImage(selectedProduct.id, imageId, token)
       await loadProducts()
       
       if (selectedProduct) {
