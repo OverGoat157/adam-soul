@@ -105,8 +105,8 @@ class Command(BaseCommand):
                             self.stdout.write(f'    Удалено {deleted} старых фото')
 
                     for idx, filename in enumerate(files):
-                        # URL относительно public/ фронтенда
-                        image_url = f'/products/{dirname}/{filename}'
+                        # URL относительно media/ на сервере
+                        image_url = f'/media/products/{dirname}/{filename}'
 
                         img, created = ProductImage.objects.get_or_create(
                             product=product,
