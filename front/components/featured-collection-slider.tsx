@@ -111,6 +111,7 @@ export function FeaturedCollectionSlider() {
                 src={item.image}
                 alt={item.title}
                 fill
+                unoptimized
                 className={cn(
                   "object-cover object-center transition-transform duration-[8000ms] ease-out",
                   index === currentIndex && "scale-110"

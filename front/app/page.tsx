@@ -85,6 +85,7 @@ export default function HomePage() {
                   src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=1200&q=80"
                   alt="Classic Collection"
                   fill
+                  unoptimized
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority
@@ -113,6 +114,7 @@ export default function HomePage() {
                   src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1200&q=80"
                   alt="Casual Collection"
                   fill
+                  unoptimized
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority

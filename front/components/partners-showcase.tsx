@@ -79,6 +79,7 @@ export function PartnersShowcase() {
                     src={partner.image || "/placeholder.svg"}
                     alt={partner.handle}
                     fill
+                    unoptimized
                     className="object-cover"
                     sizes="80px"
                   />
