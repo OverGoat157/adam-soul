@@ -38,7 +38,7 @@ export default function LoginPage() {
 
     await new Promise((resolve) => setTimeout(resolve, 300))
 
-    const success = login(username, password)
+    const success = await login(username, password)
 
     if (success) {
       router.push("/catalog/classic")

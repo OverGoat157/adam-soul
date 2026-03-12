@@ -6,7 +6,7 @@ import { useRouter, usePathname } from "next/navigation"
 interface AuthContextType {
   isAuthenticated: boolean
   user: string | null
-  login: (username: string, password: string) => boolean
+  login: (username: string, password: string) => Promise<boolean>
   logout: () => void
   isLoading: boolean
 }
@@ -52,19 +52,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated, isLoading, pathname, router])
 
-  const login = (username: string, password: string): boolean => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     const isValid = VALID_CREDENTIALS.some(
       (cred) => cred.username === username && cred.password === password
     )
 
-    if (isValid) {
-      localStorage.setItem("adamsoul_authenticated", "true")
-      localStorage.setItem("adamsoul_user", username)
-      setIsAuthenticated(true)
-      setUser(username)
-      return true
+    if (!isValid) return false
+
+    localStorage.setItem("adamsoul_authenticated", "true")
+    localStorage.setItem("adamsoul_user", username)
+    setIsAuthenticated(true)
+    setUser(username)
+
+    if (username === "admin") {
+      try {
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+        const res = await fetch(`${API_URL.replace(/\/api$/, '')}/api/auth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          localStorage.setItem("admin_token", data.token)
+        }
+      } catch {
+        // token fetch failed, admin actions will fail but login still succeeds
+      }
     }
-    return false
+
+    return true
   }
 
   const logout = () => {

@@ -5,7 +5,7 @@ from .models import Category, Product, ProductImage, ProductSize, SyncLog
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'parent']
+        fields = ['id', 'name', 'slug', 'parent', 'collection']
 
 
 class ProductSizeSerializer(serializers.ModelSerializer):

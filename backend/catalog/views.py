@@ -11,9 +11,15 @@ logger = logging.getLogger(__name__)
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """API для категорий"""
-    queryset = Category.objects.filter(is_active=True)
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        queryset = Category.objects.filter(is_active=True)
+        collection = self.request.query_params.get('collection')
+        if collection:
+            queryset = queryset.filter(collection=collection)
+        return queryset
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -28,9 +34,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not (self.request.user and self.request.user.is_staff):
             queryset = queryset.filter(is_hidden=False)
 
+        collection = self.request.query_params.get('collection', None)
         category = self.request.query_params.get('category', None)
         search = self.request.query_params.get('search', None)
         include_out_of_stock = self.request.query_params.get('include_out_of_stock', 'false').lower() == 'true'
+
+        if collection:
+            queryset = queryset.filter(category__collection=collection)
         only_out_of_stock = self.request.query_params.get('only_out_of_stock', 'false').lower() == 'true'
 
         if category and category != 'all':

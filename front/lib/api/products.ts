@@ -63,7 +63,15 @@ export async function getCategories(): Promise<Category[]> {
 
 // Получить категории по коллекции
 export async function getCategoriesByCollection(collection: 'classic' | 'casual'): Promise<Category[]> {
-  return getCategories()
+  try {
+    const res = await fetch(`${API_URL}/categories?collection=${collection}`, {
+      next: { revalidate: 900 }
+    })
+    if (!res.ok) return []
+    return res.json()
+  } catch {
+    return []
+  }
 }
 
 // Получить товары по категории

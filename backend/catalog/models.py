@@ -5,10 +5,16 @@ from django.utils import timezone
 
 class Category(models.Model):
     """Категории номенклатуры из 1С"""
+    COLLECTION_CHOICES = [
+        ('classic', 'Classic'),
+        ('casual', 'Casual'),
+    ]
+
     id_1c = models.CharField(max_length=255, unique=True, verbose_name="ID в 1С")
     name = models.CharField(max_length=255, verbose_name="Название")
     slug = models.SlugField(unique=True)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE)
+    collection = models.CharField(max_length=20, choices=COLLECTION_CHOICES, default='classic', verbose_name="Коллекция")
     sort_order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
     updated_at = models.DateTimeField(auto_now=True)
