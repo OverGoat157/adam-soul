@@ -77,7 +77,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 lg:gap-12 xl:gap-16">
               {/* Classic Collection Card */}
               <Link
-                href="/login"
+                href="/catalog/classic"
                 className="group relative flex min-h-[350px] sm:min-h-[400px] md:min-h-0 md:aspect-[3/4] lg:aspect-[4/5] xl:aspect-[3/4] flex-col justify-end overflow-hidden transition-all duration-700 hover:shadow-[0_25px_70px_rgba(0,0,0,0.25)] rounded-sm"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10 transition-opacity duration-700 group-hover:from-black/90" />
@@ -106,7 +106,7 @@ export default function HomePage() {
 
               {/* Casual Collection Card */}
               <Link
-                href="/login"
+                href="/catalog/casual"
                 className="group relative flex min-h-[350px] sm:min-h-[400px] md:min-h-0 md:aspect-[3/4] lg:aspect-[4/5] xl:aspect-[3/4] flex-col justify-end overflow-hidden transition-all duration-700 hover:shadow-[0_25px_70px_rgba(0,0,0,0.25)] rounded-sm"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10 transition-opacity duration-700 group-hover:from-black/90" />
