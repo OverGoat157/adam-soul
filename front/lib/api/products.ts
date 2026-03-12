@@ -119,7 +119,7 @@ export async function getAllProducts(token: string, onlyOutOfStock = false): Pro
     const params = new URLSearchParams({ include_hidden: 'true', include_out_of_stock: 'true' })
     if (onlyOutOfStock) params.set('only_out_of_stock', 'true')
     const res = await fetch(`${API_URL}/products?${params}`, {
-      headers: { 'Authorization': `Bearer ${token}` },
+      headers: { 'Authorization': `Token ${token}` },
       cache: 'no-store'
     })
     if (!res.ok) return []
@@ -139,7 +139,7 @@ export async function addProductImage(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Token ${token}`
     },
     body: JSON.stringify({ image_url: imageUrl })
   })
@@ -156,7 +156,7 @@ export async function reorderImages(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Token ${token}`
     },
     body: JSON.stringify({ image_ids: imageIds })
   })
@@ -169,7 +169,7 @@ export async function deleteProductImage(productId: number, imageId: number, tok
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Token ${token}`
     },
     body: JSON.stringify({ image_id: imageId })
   })
@@ -183,7 +183,7 @@ export async function toggleProductVisibility(
 ): Promise<{ is_hidden: boolean }> {
   const res = await fetch(`${API_URL}/products/${productId}/toggle_visibility`, {
     method: 'PATCH',
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Token ${token}` }
   })
   if (!res.ok) throw new Error('Failed to toggle visibility')
   return res.json()
@@ -193,7 +193,7 @@ export async function toggleProductVisibility(
 export async function triggerManualSync(token: string): Promise<{ status: string; message?: string; log_id?: number }> {
   const res = await fetch(`${API_URL}/sync/manual_sync`, {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Token ${token}` }
   })
   if (!res.ok) throw new Error('Failed to trigger sync')
   return res.json()
@@ -202,7 +202,7 @@ export async function triggerManualSync(token: string): Promise<{ status: string
 // ADMIN: Получить логи синхронизации
 export async function getSyncLogs(token: string): Promise<SyncLog[]> {
   const res = await fetch(`${API_URL}/sync`, {
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Token ${token}` }
   })
   if (!res.ok) throw new Error('Failed to fetch sync logs')
   return res.json()
