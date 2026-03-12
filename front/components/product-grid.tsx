@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { ProductCard } from "@/components/product-card"
 import type { Product } from "@/lib/api/products"
 
-const PAGE_SIZE = 12
+const PAGE_SIZE = 24
 
 interface ProductGridProps {
   products: Product[]
@@ -33,7 +33,7 @@ export function ProductGrid({ products, onProductClick }: ProductGridProps) {
       ([entry]) => {
         if (entry.isIntersecting) loadMore()
       },
-      { rootMargin: "400px" }
+      { rootMargin: "800px" }
     )
     observer.observe(el)
     return () => observer.disconnect()
