@@ -100,18 +100,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                 base['total_stock'] = sum(s['stock'] for s in base['sizes'])
                 base['price'] = str(max(p.price for p in products))
                 result.append(base)
-
-            # Остатки — размеры каждого товара которых нет в пересечении
-            for p, size_map in zip(products, product_size_maps):
-                remainder = {sz: st for sz, st in size_map.items() if sz not in common_sizes}
-                if remainder:
-                    data = ProductSerializer(p).data
-                    data['sizes'] = [
-                        {'size': sz, 'stock': st}
-                        for sz, st in sorted(remainder.items())
-                    ]
-                    data['total_stock'] = sum(remainder.values())
-                    result.append(data)
+            else:
+                # Нет общих размеров — показываем каждый товар отдельно
+                for p in products:
+                    result.append(ProductSerializer(p).data)
 
         return Response(result)
     
