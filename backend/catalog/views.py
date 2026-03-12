@@ -52,10 +52,15 @@ class ProductViewSet(viewsets.ModelViewSet):
                 Q(name__icontains=search) | Q(article__icontains=search)
             )
 
-        if only_out_of_stock:
-            queryset = queryset.filter(total_stock=0)
-        elif not include_out_of_stock:
-            queryset = queryset.filter(total_stock__gt=0)
+        # Админы видят все товары без фильтрации по остаткам
+        if self.request.user and self.request.user.is_staff:
+            if only_out_of_stock:
+                queryset = queryset.filter(total_stock=0)
+        else:
+            if only_out_of_stock:
+                queryset = queryset.filter(total_stock=0)
+            elif not include_out_of_stock:
+                queryset = queryset.filter(total_stock__gt=0)
 
         return queryset.select_related('category').prefetch_related('images', 'sizes')
 
