@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Upload, X, Plus, Trash2, Save, Search, ImageIcon, RefreshCw } from "lucide-react"
+import { ArrowLeft, Upload, X, Plus, Trash2, Save, Search, ImageIcon, RefreshCw, Edit2, Check } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/header"
 import {
@@ -13,6 +13,8 @@ import {
   addProductImage,
   reorderImages,
   deleteProductImage,
+  deleteProduct,
+  updateProductImage,
   toggleProductVisibility,
   triggerManualSync,
   cancelSync,
@@ -38,6 +40,8 @@ export default function AdminPage() {
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
   const [showSyncLogs, setShowSyncLogs] = useState(false)
   const [currentSync, setCurrentSync] = useState<SyncLog | null>(null)
+  const [editingImageId, setEditingImageId] = useState<number | null>(null)
+  const [editingImageUrl, setEditingImageUrl] = useState("")
 
   // Protect admin route
   useEffect(() => {
@@ -215,6 +219,40 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Remove image error:', error)
       alert('Ошибка удаления изображения')
+    }
+  }
+
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm('Вы уверены? Товар будет удалён полностью!')) return
+    try {
+      const token = localStorage.getItem('admin_token') || ''
+      await deleteProduct(productId, token)
+      setSelectedProduct(null)
+      await loadProducts()
+    } catch (error) {
+      console.error('Delete product error:', error)
+      alert('Ошибка удаления товара')
+    }
+  }
+
+  const handleStartEditImage = (imageId: number, currentUrl: string) => {
+    setEditingImageId(imageId)
+    setEditingImageUrl(currentUrl)
+  }
+
+  const handleSaveImageUrl = async (imageId: number) => {
+    if (!selectedProduct || !editingImageUrl.trim()) return
+    try {
+      const token = localStorage.getItem('admin_token') || ''
+      await updateProductImage(selectedProduct.id, imageId, editingImageUrl.trim(), token)
+      setEditingImageId(null)
+      setEditingImageUrl("")
+      await loadProducts()
+      const updated = products.find(p => p.id === selectedProduct.id)
+      if (updated) setSelectedProduct(updated)
+    } catch (error) {
+      console.error('Update image error:', error)
+      alert('Ошибка обновления изображения')
     }
   }
 
@@ -481,6 +519,13 @@ export default function AdminPage() {
                       Синхронизировано: {new Date(selectedProduct.synced_at).toLocaleString('ru-RU')}
                     </p>
                   </div>
+                  <button
+                    onClick={() => handleDeleteProduct(selectedProduct.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-[12px] font-medium uppercase tracking-wide hover:bg-red-700 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Удалить товар
+                  </button>
                 </div>
 
                 {/* Add New Image */}
@@ -526,56 +571,90 @@ export default function AdminPage() {
                   ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {productImages.map((image, index) => (
-                        <div
-                          key={image.id}
-                          className="group relative aspect-[3/4] overflow-hidden bg-[#F0F0F0]"
-                        >
-                          <Image
-                            src={image.image_url}
-                            alt={`Изображение ${index + 1}`}
-                            fill
-                            className="object-cover"
-                            sizes="(max-width: 768px) 50vw, 33vw"
-                          />
+                        <div key={image.id} className="group relative">
+                          <div className="relative aspect-[3/4] overflow-hidden bg-[#F0F0F0]">
+                            <Image
+                              src={image.image_url}
+                              alt={`Изображение ${index + 1}`}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 50vw, 33vw"
+                            />
 
-                          {/* Overlay Controls */}
-                          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                            {index > 0 && (
+                            {/* Overlay Controls */}
+                            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                              {index > 0 && (
+                                <button
+                                  onClick={() => handleMoveImage(index, "up")}
+                                  className="flex h-10 w-10 items-center justify-center bg-white text-[#1A1A1A] transition-colors hover:bg-[#F0F0F0]"
+                                  title="Переместить влево"
+                                >
+                                  <ArrowLeft className="h-4 w-4" />
+                                </button>
+                              )}
                               <button
-                                onClick={() => handleMoveImage(index, "up")}
-                                className="flex h-10 w-10 items-center justify-center bg-white text-[#1A1A1A] transition-colors hover:bg-[#F0F0F0]"
-                                title="Переместить влево"
+                                onClick={() => handleStartEditImage(image.id, image.image_url)}
+                                className="flex h-10 w-10 items-center justify-center bg-blue-500 text-white transition-colors hover:bg-blue-600"
+                                title="Изменить URL"
                               >
-                                <ArrowLeft className="h-4 w-4" />
+                                <Edit2 className="h-4 w-4" />
                               </button>
-                            )}
-                            <button
-                              onClick={() => handleRemoveImage(image.id)}
-                              className="flex h-10 w-10 items-center justify-center bg-[#E53E3E] text-white transition-colors hover:bg-[#C53030]"
-                              title="Удалить"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                            {index < productImages.length - 1 && (
                               <button
-                                onClick={() => handleMoveImage(index, "down")}
-                                className="flex h-10 w-10 items-center justify-center bg-white text-[#1A1A1A] transition-colors hover:bg-[#F0F0F0]"
-                                title="Переместить вправо"
+                                onClick={() => handleRemoveImage(image.id)}
+                                className="flex h-10 w-10 items-center justify-center bg-[#E53E3E] text-white transition-colors hover:bg-[#C53030]"
+                                title="Удалить"
                               >
-                                <ArrowLeft className="h-4 w-4 rotate-180" />
+                                <Trash2 className="h-4 w-4" />
                               </button>
+                              {index < productImages.length - 1 && (
+                                <button
+                                  onClick={() => handleMoveImage(index, "down")}
+                                  className="flex h-10 w-10 items-center justify-center bg-white text-[#1A1A1A] transition-colors hover:bg-[#F0F0F0]"
+                                  title="Переместить вправо"
+                                >
+                                  <ArrowLeft className="h-4 w-4 rotate-180" />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Index Badge */}
+                            <div className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center bg-white text-[12px] font-medium text-[#1A1A1A]">
+                              {index + 1}
+                            </div>
+
+                            {/* Main Badge */}
+                            {index === 0 && (
+                              <div className="absolute right-3 top-3 bg-black px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
+                                Главное
+                              </div>
                             )}
                           </div>
 
-                          {/* Index Badge */}
-                          <div className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center bg-white text-[12px] font-medium text-[#1A1A1A]">
-                            {index + 1}
-                          </div>
-
-                          {/* Main Badge */}
-                          {index === 0 && (
-                            <div className="absolute right-3 top-3 bg-black px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-white">
-                              Главное
+                          {/* Edit URL inline */}
+                          {editingImageId === image.id && (
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="text"
+                                value={editingImageUrl}
+                                onChange={(e) => setEditingImageUrl(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSaveImageUrl(image.id)}
+                                className="h-9 flex-1 bg-[#F8F8F8] px-3 text-[12px] text-[#1A1A1A] outline-none focus:bg-[#F0F0F0]"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => handleSaveImageUrl(image.id)}
+                                className="flex h-9 w-9 items-center justify-center bg-green-600 text-white hover:bg-green-700"
+                                title="Сохранить"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => { setEditingImageId(null); setEditingImageUrl("") }}
+                                className="flex h-9 w-9 items-center justify-center bg-gray-400 text-white hover:bg-gray-500"
+                                title="Отмена"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
                             </div>
                           )}
                         </div>

@@ -161,8 +161,30 @@ class ProductViewSet(viewsets.ModelViewSet):
         product = self.get_object()
         product.is_hidden = not product.is_hidden
         product.save()
-        
+
         return Response({'is_hidden': product.is_hidden})
+
+    @action(detail=True, methods=['delete'], url_path='delete_product', permission_classes=[IsAdminUser])
+    def delete_product(self, request, pk=None):
+        """Полностью удалить товар"""
+        product = self.get_object()
+        product.delete()
+        return Response({'status': 'deleted'})
+
+    @action(detail=True, methods=['patch'], url_path='update_image', permission_classes=[IsAdminUser])
+    def update_image(self, request, pk=None):
+        """Обновить URL изображения"""
+        image_id = request.data.get('image_id')
+        new_url = request.data.get('image_url')
+        if not image_id or not new_url:
+            return Response({'error': 'image_id and image_url required'}, status=400)
+        try:
+            image = ProductImage.objects.get(id=image_id, product_id=pk)
+            image.image_url = new_url
+            image.save()
+            return Response({'status': 'success'})
+        except ProductImage.DoesNotExist:
+            return Response({'error': 'Image not found'}, status=404)
 
 
 class SyncViewSet(viewsets.ReadOnlyModelViewSet):

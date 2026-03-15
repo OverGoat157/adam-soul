@@ -189,6 +189,33 @@ export async function toggleProductVisibility(
   return res.json()
 }
 
+// ADMIN: Удалить товар полностью
+export async function deleteProduct(productId: number, token: string): Promise<void> {
+  const res = await fetch(`${API_URL}/products/${productId}/delete_product`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Token ${token}` }
+  })
+  if (!res.ok) throw new Error('Failed to delete product')
+}
+
+// ADMIN: Обновить URL изображения
+export async function updateProductImage(
+  productId: number,
+  imageId: number,
+  imageUrl: string,
+  token: string
+): Promise<void> {
+  const res = await fetch(`${API_URL}/products/${productId}/update_image`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`
+    },
+    body: JSON.stringify({ image_id: imageId, image_url: imageUrl })
+  })
+  if (!res.ok) throw new Error('Failed to update image')
+}
+
 // ADMIN: Запустить синхронизацию вручную
 export async function triggerManualSync(token: string): Promise<{ status: string; message?: string; log_id?: number }> {
   const res = await fetch(`${API_URL}/sync/manual_sync`, {
