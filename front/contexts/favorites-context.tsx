@@ -1,11 +1,9 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
 
 interface FavoritesContextType {
   favorites: string[]
-  addToFavorites: (productId: string) => void
-  removeFromFavorites: (productId: string) => void
   toggleFavorite: (productId: string) => void
   isFavorite: (productId: string) => boolean
   favoritesCount: number
@@ -13,61 +11,84 @@ interface FavoritesContextType {
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined)
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
+
+function getToken() {
+  return localStorage.getItem("admin_token") || ""
+}
+
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<string[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load from localStorage on mount
+  // Загружаем избранное с сервера после монтирования
   useEffect(() => {
-    const stored = localStorage.getItem("adamsoul_favorites")
-    if (stored) {
+    const load = async () => {
+      const token = getToken()
+      if (!token) {
+        // Не авторизован — пустой список
+        setIsLoaded(true)
+        return
+      }
       try {
-        setFavorites(JSON.parse(stored))
+        const res = await fetch(`${API_BASE}/favorites`, {
+          headers: { Authorization: `Token ${token}` },
+          cache: "no-store",
+        })
+        if (res.ok) {
+          const ids: number[] = await res.json()
+          setFavorites(ids.map(String))
+        }
       } catch {
-        setFavorites([])
+        // Нет соединения — ничего страшного
+      } finally {
+        setIsLoaded(true)
       }
     }
-    setIsLoaded(true)
+    load()
   }, [])
 
-  // Save to localStorage on change
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("adamsoul_favorites", JSON.stringify(favorites))
+  const toggleFavorite = useCallback(async (productId: string) => {
+    const token = getToken()
+    const already = favorites.includes(productId)
+
+    // Оптимистичное обновление
+    setFavorites(prev =>
+      already ? prev.filter(id => id !== productId) : [...prev, productId]
+    )
+
+    if (!token) return
+
+    try {
+      if (already) {
+        await fetch(`${API_BASE}/favorites/${productId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Token ${token}` },
+        })
+      } else {
+        await fetch(`${API_BASE}/favorites`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${token}`,
+          },
+          body: JSON.stringify({ product_id: Number(productId) }),
+        })
+      }
+    } catch {
+      // Откат если запрос упал
+      setFavorites(prev =>
+        already ? [...prev, productId] : prev.filter(id => id !== productId)
+      )
     }
-  }, [favorites, isLoaded])
-
-  const addToFavorites = (productId: string) => {
-    setFavorites((prev) => {
-      if (prev.includes(productId)) return prev
-      return [...prev, productId]
-    })
-  }
-
-  const removeFromFavorites = (productId: string) => {
-    setFavorites((prev) => prev.filter((id) => id !== productId))
-  }
-
-  const toggleFavorite = (productId: string) => {
-    if (favorites.includes(productId)) {
-      removeFromFavorites(productId)
-    } else {
-      addToFavorites(productId)
-    }
-  }
-
-  const isFavorite = (productId: string) => {
-    return favorites.includes(productId)
-  }
+  }, [favorites])
 
   return (
     <FavoritesContext.Provider
       value={{
         favorites,
-        addToFavorites,
-        removeFromFavorites,
         toggleFavorite,
-        isFavorite,
+        isFavorite: (id) => favorites.includes(id),
         favoritesCount: favorites.length,
       }}
     >

@@ -2,8 +2,8 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser, AllowAny
-from .models import Category, Product, ProductImage, SyncLog
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser, AllowAny, IsAuthenticated
+from .models import Category, Product, ProductImage, SyncLog, Favorite
 from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, SyncLogSerializer
 import logging
 
@@ -351,3 +351,30 @@ class SiteUserViewSet(drf_viewsets.ViewSet):
             return Response({'status': 'deleted'})
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=404)
+
+
+# ──────────────────────────────────────────────
+# Избранное — персональное для каждого юзера
+# ──────────────────────────────────────────────
+class FavoriteViewSet(drf_viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        ids = list(
+            Favorite.objects.filter(user=request.user)
+            .values_list('product_id', flat=True)
+        )
+        return Response(ids)
+
+    def create(self, request):
+        product_id = request.data.get('product_id')
+        try:
+            product = Product.objects.get(pk=product_id)
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found'}, status=404)
+        Favorite.objects.get_or_create(user=request.user, product=product)
+        return Response({'status': 'added'})
+
+    def destroy(self, request, pk=None):
+        Favorite.objects.filter(user=request.user, product_id=pk).delete()
+        return Response({'status': 'removed'})

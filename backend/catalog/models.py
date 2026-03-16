@@ -2,6 +2,7 @@
 from decimal import Decimal
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 class Category(models.Model):
     """Категории номенклатуры из 1С"""
@@ -73,6 +74,17 @@ class ProductSize(models.Model):
     class Meta:
         unique_together = ['product', 'size']
         ordering = ['size']
+
+
+class Favorite(models.Model):
+    """Избранные товары пользователя"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='favorited_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'product']
+        ordering = ['-created_at']
 
 
 class SyncLog(models.Model):
