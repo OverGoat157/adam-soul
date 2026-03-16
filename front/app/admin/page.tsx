@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Upload, X, Plus, Trash2, Save, Search, ImageIcon, RefreshCw, Edit2, Check } from "lucide-react"
+import { ArrowLeft, Upload, X, Plus, Trash2, Save, Search, ImageIcon, RefreshCw, Edit2, Check, Users, Copy, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/header"
 import {
@@ -20,13 +20,17 @@ import {
   cancelSync,
   getSyncLogs,
   getSyncStatus,
+  getSiteUsers,
+  createSiteUser,
+  deleteSiteUser,
   type Product,
-  type SyncLog
+  type SyncLog,
+  type SiteUser,
 } from "@/lib/api/products"
 import { cn } from "@/lib/utils"
 
 export default function AdminPage() {
-  const { isAuthenticated, user, isLoading } = useAuth()
+  const { isAuthenticated, user, isAdmin, isLoading } = useAuth()
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -42,21 +46,27 @@ export default function AdminPage() {
   const [currentSync, setCurrentSync] = useState<SyncLog | null>(null)
   const [editingImageId, setEditingImageId] = useState<number | null>(null)
   const [editingImageUrl, setEditingImageUrl] = useState("")
+  const [activeSection, setActiveSection] = useState<"products" | "users">("products")
+  const [siteUsers, setSiteUsers] = useState<SiteUser[]>([])
+  const [newUsername, setNewUsername] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [createdUser, setCreatedUser] = useState<SiteUser | null>(null)
 
   // Protect admin route
   useEffect(() => {
-    if (!isLoading && (!isAuthenticated || user !== "admin")) {
+    if (!isLoading && (!isAuthenticated || !isAdmin)) {
       router.push("/login")
     }
-  }, [isAuthenticated, user, isLoading, router])
+  }, [isAuthenticated, isAdmin, isLoading, router])
 
   // Load products on mount
   useEffect(() => {
-    if (isAuthenticated && user === "admin") {
+    if (isAuthenticated && isAdmin) {
       loadProducts()
       loadSyncLogs()
+      loadSiteUsers()
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, isAdmin])
 
   // Poll sync status while sync is running
   useEffect(() => {
@@ -148,6 +158,44 @@ export default function AdminPage() {
     }
   }
 
+  const loadSiteUsers = async () => {
+    try {
+      const token = localStorage.getItem('admin_token') || ''
+      const users = await getSiteUsers(token)
+      setSiteUsers(users)
+    } catch (error) {
+      console.error('Failed to load users:', error)
+    }
+  }
+
+  const handleCreateUser = async (random: boolean) => {
+    try {
+      const token = localStorage.getItem('admin_token') || ''
+      const created = await createSiteUser(
+        token,
+        random ? undefined : (newUsername || undefined),
+        random ? undefined : (newPassword || undefined)
+      )
+      setCreatedUser(created)
+      setNewUsername("")
+      setNewPassword("")
+      await loadSiteUsers()
+    } catch (error: any) {
+      alert(error.message || 'Ошибка создания пользователя')
+    }
+  }
+
+  const handleDeleteUser = async (userId: number) => {
+    if (!confirm('Удалить пользователя?')) return
+    try {
+      const token = localStorage.getItem('admin_token') || ''
+      await deleteSiteUser(userId, token)
+      await loadSiteUsers()
+    } catch {
+      alert('Ошибка удаления пользователя')
+    }
+  }
+
   const handleToggleVisibility = async (productId: number) => {
     try {
       const token = localStorage.getItem('admin_token') || ''
@@ -172,7 +220,7 @@ export default function AdminPage() {
     )
   }
 
-  if (!isAuthenticated || user !== "admin") {
+  if (!isAuthenticated || !isAdmin) {
     return null
   }
 
@@ -300,9 +348,25 @@ export default function AdminPage() {
             <h1 className="text-[36px] md:text-[42px] font-light text-[#1A1A1A] tracking-tight">
               Admin Panel
             </h1>
-            <p className="mt-3 text-[15px] text-[#666666]">
-              Управление товарами и синхронизация с 1С
-            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setActiveSection("products")}
+                className={cn("px-4 py-2 text-[12px] font-medium uppercase tracking-wide transition-colors",
+                  activeSection === "products" ? "bg-black text-white" : "border border-[#E0E0E0] text-[#666666] hover:bg-[#F8F8F8]"
+                )}
+              >
+                Товары
+              </button>
+              <button
+                onClick={() => setActiveSection("users")}
+                className={cn("flex items-center gap-2 px-4 py-2 text-[12px] font-medium uppercase tracking-wide transition-colors",
+                  activeSection === "users" ? "bg-black text-white" : "border border-[#E0E0E0] text-[#666666] hover:bg-[#F8F8F8]"
+                )}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Пользователи
+              </button>
+            </div>
           </div>
 
           {/* Sync Button */}
@@ -398,7 +462,117 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="grid gap-6 md:gap-8 lg:grid-cols-[350px,1fr]">
+        {/* Users Section */}
+        {activeSection === "users" && (
+          <div className="grid gap-6 md:gap-8 lg:grid-cols-[400px,1fr]">
+            {/* Create User */}
+            <div className="bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+              <h3 className="mb-5 text-[16px] font-medium text-[#1A1A1A]">Создать пользователя</h3>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Логин (оставьте пустым для случайного)"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="h-11 w-full bg-[#F8F8F8] px-4 text-[13px] text-[#1A1A1A] placeholder:text-[#999999] outline-none focus:bg-[#F0F0F0]"
+                />
+                <input
+                  type="text"
+                  placeholder="Пароль (оставьте пустым для случайного)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="h-11 w-full bg-[#F8F8F8] px-4 text-[13px] text-[#1A1A1A] placeholder:text-[#999999] outline-none focus:bg-[#F0F0F0]"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleCreateUser(false)}
+                    className="flex-1 h-11 bg-black text-white text-[12px] font-semibold uppercase tracking-wide hover:bg-[#333] transition-colors"
+                  >
+                    Создать
+                  </button>
+                  <button
+                    onClick={() => handleCreateUser(true)}
+                    className="flex-1 h-11 border border-[#E0E0E0] text-[12px] font-medium text-[#666] uppercase tracking-wide hover:bg-[#F8F8F8] transition-colors"
+                  >
+                    Случайные данные
+                  </button>
+                </div>
+              </div>
+
+              {/* Created user credentials */}
+              {createdUser && (
+                <div className="mt-5 bg-green-50 border border-green-200 p-4">
+                  <p className="mb-2 text-[12px] font-semibold text-green-800 uppercase tracking-wide">Пользователь создан</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[#666]">Логин:</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-[13px] font-mono font-bold text-[#1A1A1A]">{createdUser.username}</code>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(createdUser.username)}
+                          className="text-[#999] hover:text-[#1A1A1A]"
+                          title="Скопировать"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[12px] text-[#666]">Пароль:</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-[13px] font-mono font-bold text-[#1A1A1A]">{createdUser.password}</code>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(createdUser.password || '')}
+                          className="text-[#999] hover:text-[#1A1A1A]"
+                          title="Скопировать"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(`Логин: ${createdUser.username}\nПароль: ${createdUser.password}`)}
+                      className="mt-1 w-full flex items-center justify-center gap-2 h-9 border border-green-300 text-[12px] text-green-700 hover:bg-green-100 transition-colors"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Скопировать всё
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* User List */}
+            <div className="bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
+              <h3 className="mb-5 text-[16px] font-medium text-[#1A1A1A]">
+                Пользователи каталога ({siteUsers.length})
+              </h3>
+              {siteUsers.length === 0 ? (
+                <div className="flex h-40 items-center justify-center text-[14px] text-[#999]">
+                  Нет пользователей
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {siteUsers.map(u => (
+                    <div key={u.id} className="flex items-center justify-between p-3 bg-[#F8F8F8]">
+                      <span className="text-[14px] font-mono font-medium text-[#1A1A1A]">{u.username}</span>
+                      <button
+                        onClick={() => handleDeleteUser(u.id)}
+                        className="flex h-8 w-8 items-center justify-center text-[#999] hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Удалить"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Products Section */}
+        {activeSection === "products" && <div className="grid gap-6 md:gap-8 lg:grid-cols-[350px,1fr]">
           {/* Left: Product List */}
           <div className="bg-white p-4 md:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)]">
             <div className="mb-4 flex border-b border-[#E0E0E0]">
@@ -689,7 +863,7 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </main>
     </div>
   )

@@ -270,3 +270,64 @@ class SyncViewSet(viewsets.ReadOnlyModelViewSet):
         if updated:
             return Response({'status': 'cancelled'})
         return Response({'status': 'not_running'})
+
+
+# ──────────────────────────────────────────────
+# Кастомный auth token — возвращает is_staff
+# ──────────────────────────────────────────────
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+
+class CustomAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'is_staff': user.is_staff,
+            'username': user.username,
+        })
+
+
+# ──────────────────────────────────────────────
+# Управление пользователями каталога
+# ──────────────────────────────────────────────
+import random
+import string
+from django.contrib.auth.models import User
+from rest_framework import viewsets as drf_viewsets
+
+class SiteUserViewSet(drf_viewsets.ViewSet):
+    permission_classes = [IsAdminUser]
+
+    def list(self, request):
+        users = User.objects.filter(is_staff=False, is_active=True).order_by('username')
+        return Response([{'id': u.id, 'username': u.username} for u in users])
+
+    def create(self, request):
+        def rand_str(n, chars):
+            return ''.join(random.choices(chars, k=n))
+
+        username = request.data.get('username') or rand_str(8, string.ascii_lowercase)
+        password = request.data.get('password') or (
+            rand_str(4, string.ascii_uppercase) +
+            rand_str(4, string.ascii_lowercase) +
+            rand_str(2, string.digits)
+        )
+
+        if User.objects.filter(username=username).exists():
+            return Response({'error': 'Пользователь уже существует'}, status=400)
+
+        user = User.objects.create_user(username=username, password=password)
+        Token.objects.get_or_create(user=user)
+        return Response({'id': user.id, 'username': username, 'password': password})
+
+    def destroy(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk, is_staff=False)
+            user.delete()
+            return Response({'status': 'deleted'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)

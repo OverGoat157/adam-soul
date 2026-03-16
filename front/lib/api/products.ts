@@ -250,3 +250,49 @@ export async function getSyncStatus(): Promise<SyncLog | null> {
     return null
   }
 }
+
+// ──────────────────────────────────────────────
+// Управление пользователями
+// ──────────────────────────────────────────────
+export interface SiteUser {
+  id: number
+  username: string
+  password?: string  // возвращается только при создании
+}
+
+export async function getSiteUsers(token: string): Promise<SiteUser[]> {
+  const res = await fetch(`${API_URL}/users`, {
+    headers: { 'Authorization': `Token ${token}` },
+    cache: 'no-store',
+  })
+  if (!res.ok) throw new Error('Failed to fetch users')
+  return res.json()
+}
+
+export async function createSiteUser(
+  token: string,
+  username?: string,
+  password?: string
+): Promise<SiteUser> {
+  const res = await fetch(`${API_URL}/users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`,
+    },
+    body: JSON.stringify({ username, password }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to create user')
+  }
+  return res.json()
+}
+
+export async function deleteSiteUser(userId: number, token: string): Promise<void> {
+  const res = await fetch(`${API_URL}/users/${userId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Token ${token}` },
+  })
+  if (!res.ok) throw new Error('Failed to delete user')
+}
