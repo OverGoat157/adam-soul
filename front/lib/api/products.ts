@@ -289,6 +289,27 @@ export async function createSiteUser(
   return res.json()
 }
 
+export async function updateSiteUser(
+  userId: number,
+  token: string,
+  username?: string,
+  password?: string
+): Promise<SiteUser> {
+  const res = await fetch(`${API_URL}/users/${userId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Token ${token}`,
+    },
+    body: JSON.stringify({ username, password }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to update user')
+  }
+  return res.json()
+}
+
 export async function deleteSiteUser(userId: number, token: string): Promise<void> {
   const res = await fetch(`${API_URL}/users/${userId}`, {
     method: 'DELETE',

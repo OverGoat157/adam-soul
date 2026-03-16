@@ -324,6 +324,26 @@ class SiteUserViewSet(drf_viewsets.ViewSet):
         Token.objects.get_or_create(user=user)
         return Response({'id': user.id, 'username': username, 'password': password})
 
+    def partial_update(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk, is_staff=False)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
+
+        new_username = request.data.get('username')
+        new_password = request.data.get('password')
+
+        if new_username and new_username != user.username:
+            if User.objects.filter(username=new_username).exists():
+                return Response({'error': 'Имя уже занято'}, status=400)
+            user.username = new_username
+
+        if new_password:
+            user.set_password(new_password)
+
+        user.save()
+        return Response({'id': user.id, 'username': user.username})
+
     def destroy(self, request, pk=None):
         try:
             user = User.objects.get(pk=pk, is_staff=False)

@@ -22,6 +22,7 @@ import {
   getSyncStatus,
   getSiteUsers,
   createSiteUser,
+  updateSiteUser,
   deleteSiteUser,
   type Product,
   type SyncLog,
@@ -51,6 +52,9 @@ export default function AdminPage() {
   const [newUsername, setNewUsername] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [createdUser, setCreatedUser] = useState<SiteUser | null>(null)
+  const [editingUserId, setEditingUserId] = useState<number | null>(null)
+  const [editUsername, setEditUsername] = useState("")
+  const [editPassword, setEditPassword] = useState("")
 
   // Protect admin route
   useEffect(() => {
@@ -182,6 +186,23 @@ export default function AdminPage() {
       await loadSiteUsers()
     } catch (error: any) {
       alert(error.message || 'Ошибка создания пользователя')
+    }
+  }
+
+  const handleStartEditUser = (u: SiteUser) => {
+    setEditingUserId(u.id)
+    setEditUsername(u.username)
+    setEditPassword("")
+  }
+
+  const handleSaveUser = async (userId: number) => {
+    try {
+      const token = localStorage.getItem('admin_token') || ''
+      await updateSiteUser(userId, token, editUsername || undefined, editPassword || undefined)
+      setEditingUserId(null)
+      await loadSiteUsers()
+    } catch (error: any) {
+      alert(error.message || 'Ошибка обновления пользователя')
     }
   }
 
@@ -554,15 +575,59 @@ export default function AdminPage() {
               ) : (
                 <div className="space-y-2">
                   {siteUsers.map(u => (
-                    <div key={u.id} className="flex items-center justify-between p-3 bg-[#F8F8F8]">
-                      <span className="text-[14px] font-mono font-medium text-[#1A1A1A]">{u.username}</span>
-                      <button
-                        onClick={() => handleDeleteUser(u.id)}
-                        className="flex h-8 w-8 items-center justify-center text-[#999] hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Удалить"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                    <div key={u.id} className="bg-[#F8F8F8]">
+                      {editingUserId === u.id ? (
+                        <div className="p-3 space-y-2">
+                          <input
+                            type="text"
+                            value={editUsername}
+                            onChange={(e) => setEditUsername(e.target.value)}
+                            placeholder="Логин"
+                            className="h-9 w-full bg-white border border-[#E0E0E0] px-3 text-[13px] outline-none focus:border-black"
+                          />
+                          <input
+                            type="text"
+                            value={editPassword}
+                            onChange={(e) => setEditPassword(e.target.value)}
+                            placeholder="Новый пароль (оставьте пустым чтобы не менять)"
+                            className="h-9 w-full bg-white border border-[#E0E0E0] px-3 text-[13px] outline-none focus:border-black"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleSaveUser(u.id)}
+                              className="flex-1 h-8 bg-black text-white text-[11px] font-semibold uppercase tracking-wide hover:bg-[#333] transition-colors"
+                            >
+                              Сохранить
+                            </button>
+                            <button
+                              onClick={() => setEditingUserId(null)}
+                              className="flex-1 h-8 border border-[#E0E0E0] text-[11px] text-[#666] uppercase tracking-wide hover:bg-white transition-colors"
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between p-3">
+                          <span className="text-[14px] font-mono font-medium text-[#1A1A1A]">{u.username}</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleStartEditUser(u)}
+                              className="flex h-8 w-8 items-center justify-center text-[#999] hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="Изменить"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(u.id)}
+                              className="flex h-8 w-8 items-center justify-center text-[#999] hover:text-red-600 hover:bg-red-50 transition-colors"
+                              title="Удалить"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
