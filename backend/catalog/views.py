@@ -104,10 +104,17 @@ class ProductViewSet(viewsets.ModelViewSet):
             return all_images
 
         def normalize_size(size_str):
-            """Извлекает базовый размер: '48\\176-182' → '48', '50,182' → '50'."""
+            """Извлекает базовый размер: '48\\176-182' → '48', '50,182' → '50', '48-194' → '48'."""
             for sep in ['\\', ',', '/']:
                 if sep in size_str:
                     return size_str.split(sep)[0].strip()
+            # '48-194' → '48': дефис между размером (2 цифры) и ростом (3 цифры)
+            if '-' in size_str:
+                parts = size_str.split('-', 1)
+                left = parts[0].strip()
+                right = parts[1].strip()
+                if left.isdigit() and right.isdigit() and len(left) <= 2 and len(right) >= 3:
+                    return left
             return size_str.strip()
 
         def build_normalized_size_map(product):
