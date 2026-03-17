@@ -72,8 +72,65 @@ class ProductViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(queryset, many=True)
             return Response(serializer.data)
 
-        # Группировка по артикулу
         from collections import defaultdict
+
+        def get_product_role(name):
+            lower = name.lower()
+            if 'пиджак' in lower:
+                return 'jacket'
+            if 'брюки' in lower or 'брюк' in lower:
+                return 'pants'
+            return None
+
+        def get_variant_key(name, article):
+            """Возвращает суффикс после артикула в названии (например 'BS' или '')."""
+            idx = name.lower().find(article.lower())
+            if idx != -1:
+                return name[idx + len(article):].strip()
+            return ''
+
+        def make_images(product_list):
+            all_images, seen = [], set()
+            for p in product_list:
+                for img in p.images.all():
+                    if img.image_url and img.image_url not in seen:
+                        all_images.append({
+                            'id': img.id,
+                            'image_url': img.image_url,
+                            'is_from_1c': img.is_from_1c,
+                            'sort_order': img.sort_order,
+                        })
+                        seen.add(img.image_url)
+            return all_images
+
+        def merge_pair(base_product, pair_products):
+            """Создаёт объединённую карточку: пересечение размеров + объединение фото."""
+            size_maps = [
+                {s.size: s.stock for s in p.sizes.all() if s.stock > 0}
+                for p in pair_products
+            ]
+            common = set(size_maps[0].keys())
+            for sm in size_maps[1:]:
+                common &= set(sm.keys())
+
+            if not common:
+                return None  # нет пересечения — не мёржим
+
+            base = ProductSerializer(base_product).data
+            base['sizes'] = [
+                {'size': size, 'stock': min(sm.get(size, 0) for sm in size_maps)}
+                for size in sorted(common)
+            ]
+            base['total_stock'] = sum(s['stock'] for s in base['sizes'])
+            base['price'] = str(max(p.price for p in pair_products))
+            imgs = make_images(pair_products)
+            if imgs:
+                base['images'] = imgs
+                if not base.get('main_image'):
+                    base['main_image'] = imgs[0]['image_url']
+            return base
+
+        # Группировка по артикулу
         by_article = defaultdict(list)
         for product in queryset:
             by_article[product.article].append(product)
@@ -84,48 +141,61 @@ class ProductViewSet(viewsets.ModelViewSet):
                 result.append(ProductSerializer(products[0]).data)
                 continue
 
-            # Карта размеров для каждого товара (только с остатком > 0)
-            product_size_maps = []
-            for p in products:
-                size_map = {s.size: s.stock for s in p.sizes.all() if s.stock > 0}
-                product_size_maps.append(size_map)
+            jackets = [p for p in products if get_product_role(p.name) == 'jacket']
+            pants = [p for p in products if get_product_role(p.name) == 'pants']
+            others = [p for p in products if get_product_role(p.name) is None]
 
-            # Пересечение — размеры где ВСЕ компоненты имеют остаток
-            common_sizes = set(product_size_maps[0].keys())
-            for sm in product_size_maps[1:]:
-                common_sizes &= set(sm.keys())
+            if jackets and pants:
+                # Попарное объединение: пиджак BS + брюки BS, пиджак + брюки, и т.д.
+                jacket_by_variant = {get_variant_key(p.name, article): p for p in jackets}
+                pants_by_variant = {get_variant_key(p.name, article): p for p in pants}
+                all_variants = set(jacket_by_variant) | set(pants_by_variant)
 
-            # Объединённая карточка с пересечением размеров
-            if common_sizes:
-                base = ProductSerializer(products[0]).data
-                base['sizes'] = [
-                    {'size': size, 'stock': min(sm.get(size, 0) for sm in product_size_maps)}
-                    for size in sorted(common_sizes)
-                ]
-                base['total_stock'] = sum(s['stock'] for s in base['sizes'])
-                base['price'] = str(max(p.price for p in products))
-                # Объединяем фото всех товаров группы
-                all_images = []
-                seen_urls = set()
-                for p in products:
-                    for img in p.images.all():
-                        if img.image_url and img.image_url not in seen_urls:
-                            all_images.append({
-                                'id': img.id,
-                                'image_url': img.image_url,
-                                'is_from_1c': img.is_from_1c,
-                                'sort_order': img.sort_order,
-                            })
-                            seen_urls.add(img.image_url)
-                if all_images:
-                    base['images'] = all_images
-                    if not base.get('main_image'):
-                        base['main_image'] = all_images[0]['image_url']
-                result.append(base)
-            else:
-                # Нет общих размеров — показываем каждый товар отдельно
-                for p in products:
+                for variant in sorted(all_variants):
+                    j = jacket_by_variant.get(variant)
+                    pa = pants_by_variant.get(variant)
+
+                    if j and pa:
+                        merged = merge_pair(j, [j, pa])
+                        if merged:
+                            result.append(merged)
+                        else:
+                            result.append(ProductSerializer(j).data)
+                            result.append(ProductSerializer(pa).data)
+                    elif j:
+                        result.append(ProductSerializer(j).data)
+                    elif pa:
+                        result.append(ProductSerializer(pa).data)
+
+                for p in others:
                     result.append(ProductSerializer(p).data)
+            else:
+                # Не пиджак+брюки — стандартное пересечение всех товаров группы
+                size_maps = [
+                    {s.size: s.stock for s in p.sizes.all() if s.stock > 0}
+                    for p in products
+                ]
+                common = set(size_maps[0].keys())
+                for sm in size_maps[1:]:
+                    common &= set(sm.keys())
+
+                if common:
+                    base = ProductSerializer(products[0]).data
+                    base['sizes'] = [
+                        {'size': size, 'stock': min(sm.get(size, 0) for sm in size_maps)}
+                        for size in sorted(common)
+                    ]
+                    base['total_stock'] = sum(s['stock'] for s in base['sizes'])
+                    base['price'] = str(max(p.price for p in products))
+                    imgs = make_images(products)
+                    if imgs:
+                        base['images'] = imgs
+                        if not base.get('main_image'):
+                            base['main_image'] = imgs[0]['image_url']
+                    result.append(base)
+                else:
+                    for p in products:
+                        result.append(ProductSerializer(p).data)
 
         return Response(result)
     
