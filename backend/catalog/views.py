@@ -138,6 +138,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                 return None  # нет пересечения — не мёржим
 
             base = ProductSerializer(base_product).data
+            # Переименовываем: «пиджак» → «костюм»
+            import re
+            base['name'] = re.sub(r'(?i)пиджак', 'Костюм', base['name'])
             base['sizes'] = [
                 {'size': size, 'stock': min(sm.get(size, 0) for sm in size_maps)}
                 for size in sorted(common, key=lambda x: int(x) if x.isdigit() else x)
