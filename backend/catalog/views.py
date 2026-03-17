@@ -103,12 +103,26 @@ class ProductViewSet(viewsets.ModelViewSet):
                         seen.add(img.image_url)
             return all_images
 
+        def normalize_size(size_str):
+            """Извлекает базовый размер: '48\\176-182' → '48', '50,182' → '50'."""
+            for sep in ['\\', ',', '/']:
+                if sep in size_str:
+                    return size_str.split(sep)[0].strip()
+            return size_str.strip()
+
+        def build_normalized_size_map(product):
+            """Карта {базовый_размер: суммарный_остаток} с агрегацией по вариантам роста."""
+            normalized = defaultdict(int)
+            for s in product.sizes.all():
+                if s.stock > 0:
+                    base = normalize_size(s.size)
+                    normalized[base] += s.stock
+            return dict(normalized)
+
         def merge_pair(base_product, pair_products):
-            """Создаёт объединённую карточку: пересечение размеров + объединение фото."""
-            size_maps = [
-                {s.size: s.stock for s in p.sizes.all() if s.stock > 0}
-                for p in pair_products
-            ]
+            """Создаёт объединённую карточку: пересечение нормализованных размеров + объединение фото."""
+            size_maps = [build_normalized_size_map(p) for p in pair_products]
+
             common = set(size_maps[0].keys())
             for sm in size_maps[1:]:
                 common &= set(sm.keys())
@@ -119,7 +133,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             base = ProductSerializer(base_product).data
             base['sizes'] = [
                 {'size': size, 'stock': min(sm.get(size, 0) for sm in size_maps)}
-                for size in sorted(common)
+                for size in sorted(common, key=lambda x: int(x) if x.isdigit() else x)
             ]
             base['total_stock'] = sum(s['stock'] for s in base['sizes'])
             base['price'] = str(max(p.price for p in pair_products))
