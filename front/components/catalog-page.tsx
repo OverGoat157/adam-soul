@@ -153,6 +153,7 @@ function FiltersRow({ compact = false, searchQuery, setSearchQuery, filterBS, se
 
 export function CatalogPage({ collection }: CatalogPageProps) {
   const [activeCategory, setActiveCategory] = useState("all")
+  const [sidebarKeyword, setSidebarKeyword] = useState<string | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -219,14 +220,30 @@ export function CatalogPage({ collection }: CatalogPageProps) {
   }
 
   const activeCategoryName = useMemo(() => {
+    if (sidebarKeyword === "Смокинг") return "Смокинги"
     if (activeCategory === 'all') return 'Все товары'
     const category = categories.find((c) => c.slug === activeCategory)
     return category?.name || "Все товары"
-  }, [categories, activeCategory])
+  }, [categories, activeCategory, sidebarKeyword])
 
-  // Клиентские фильтры: BS, Zidan, сортировка по цене
+  const handleCategoryChange = (slug: string) => {
+    setActiveCategory(slug)
+    setSidebarKeyword(null)
+  }
+
+  const handleKeywordChange = (keyword: string | null) => {
+    setSidebarKeyword(keyword)
+    if (keyword) setActiveCategory("all")
+  }
+
+  // Клиентские фильтры: BS, Zidan, Смокинги, сортировка по цене
   const filteredProducts = useMemo(() => {
     let result = [...products]
+
+    if (sidebarKeyword) {
+      const kw = sidebarKeyword.toLowerCase()
+      result = result.filter((p) => p.name.toLowerCase().includes(kw))
+    }
 
     if (filterBS || filterZidan) {
       result = result.filter((p) => {
@@ -242,7 +259,7 @@ export function CatalogPage({ collection }: CatalogPageProps) {
     else if (priceSort === 'desc') result.sort((a, b) => b.price - a.price)
 
     return result
-  }, [products, filterBS, filterZidan, priceSort])
+  }, [products, sidebarKeyword, filterBS, filterZidan, priceSort])
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product)
@@ -267,7 +284,10 @@ export function CatalogPage({ collection }: CatalogPageProps) {
         <CategorySidebar
           categories={categories}
           activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
+          onCategoryChange={handleCategoryChange}
+          sidebarKeyword={sidebarKeyword}
+          onKeywordChange={handleKeywordChange}
+          collection={collection}
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
         />

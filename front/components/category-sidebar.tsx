@@ -8,6 +8,9 @@ interface CategorySidebarProps {
   categories: Category[]
   activeCategory: string
   onCategoryChange: (slug: string) => void
+  sidebarKeyword?: string | null
+  onKeywordChange?: (keyword: string | null) => void
+  collection?: string
   isOpen: boolean
   onToggle: () => void
 }
@@ -16,6 +19,9 @@ export function CategorySidebar({
   categories,
   activeCategory,
   onCategoryChange,
+  sidebarKeyword,
+  onKeywordChange,
+  collection,
   isOpen,
   onToggle,
 }: CategorySidebarProps) {
@@ -57,18 +63,42 @@ export function CategorySidebar({
                 }}
                 className={cn(
                   "w-full py-3 text-left text-[15px] font-medium transition-all duration-300 whitespace-nowrap",
-                  activeCategory === "all"
+                  activeCategory === "all" && !sidebarKeyword
                     ? "text-[#1A1A1A]"
                     : "text-[#999999] hover:text-[#1A1A1A]"
                 )}
               >
                 <span className={cn(
                   "relative pb-1",
-                  activeCategory === "all" && "after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-black"
+                  activeCategory === "all" && !sidebarKeyword && "after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-black"
                 )}>
                   Все товары
                 </span>
               </button>
+
+              {collection === "classic" && (
+                <button
+                  onClick={() => {
+                    onKeywordChange?.("Смокинг")
+                    if (window.innerWidth < 768) {
+                      onToggle()
+                    }
+                  }}
+                  className={cn(
+                    "w-full py-3 text-left text-[15px] font-medium transition-all duration-300 whitespace-nowrap",
+                    sidebarKeyword === "Смокинг"
+                      ? "text-[#1A1A1A]"
+                      : "text-[#999999] hover:text-[#1A1A1A]"
+                  )}
+                >
+                  <span className={cn(
+                    "relative pb-1",
+                    sidebarKeyword === "Смокинг" && "after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-black"
+                  )}>
+                    Смокинги
+                  </span>
+                </button>
+              )}
 
               {categories.map((category) => (
                 <button
@@ -81,14 +111,14 @@ export function CategorySidebar({
                   }}
                   className={cn(
                     "w-full py-3 text-left text-[15px] font-medium transition-all duration-300 whitespace-nowrap",
-                    activeCategory === category.slug
+                    activeCategory === category.slug && !sidebarKeyword
                       ? "text-[#1A1A1A]"
                       : "text-[#999999] hover:text-[#1A1A1A]"
                   )}
                 >
                   <span className={cn(
                     "relative pb-1",
-                    activeCategory === category.slug && "after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-black"
+                    activeCategory === category.slug && !sidebarKeyword && "after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-black"
                   )}>
                     {category.name}
                   </span>

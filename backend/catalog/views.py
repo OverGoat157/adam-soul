@@ -104,6 +104,23 @@ class ProductViewSet(viewsets.ModelViewSet):
                 ]
                 base['total_stock'] = sum(s['stock'] for s in base['sizes'])
                 base['price'] = str(max(p.price for p in products))
+                # Объединяем фото всех товаров группы
+                all_images = []
+                seen_urls = set()
+                for p in products:
+                    for img in p.images.all():
+                        if img.image_url and img.image_url not in seen_urls:
+                            all_images.append({
+                                'id': img.id,
+                                'image_url': img.image_url,
+                                'is_from_1c': img.is_from_1c,
+                                'sort_order': img.sort_order,
+                            })
+                            seen_urls.add(img.image_url)
+                if all_images:
+                    base['images'] = all_images
+                    if not base.get('main_image'):
+                        base['main_image'] = all_images[0]['image_url']
                 result.append(base)
             else:
                 # Нет общих размеров — показываем каждый товар отдельно
