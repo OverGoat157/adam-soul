@@ -160,11 +160,10 @@ class ProductViewSet(viewsets.ModelViewSet):
             by_article[product.article].append(product)
 
         result = []
-        for article, products in by_article.items():
-            if len(products) == 1:
-                result.append(ProductSerializer(products[0]).data)
-                continue
+        orphan_jackets = {}   # article -> [products]
+        orphan_pants = {}     # article -> [products]
 
+        for article, products in by_article.items():
             jackets = [p for p in products if get_product_role(p.name) == 'jacket']
             pants = [p for p in products if get_product_role(p.name) == 'pants']
             others = [p for p in products if get_product_role(p.name) is None]
@@ -193,8 +192,24 @@ class ProductViewSet(viewsets.ModelViewSet):
 
                 for p in others:
                     result.append(ProductSerializer(p).data)
+
+            elif jackets:
+                # Только пиджаки — сохраняем как сирот для кросс-артикульного мерджа
+                orphan_jackets[article] = jackets
+                for p in others:
+                    result.append(ProductSerializer(p).data)
+
+            elif pants:
+                # Только брюки — сохраняем как сирот для кросс-артикульного мерджа
+                orphan_pants[article] = pants
+                for p in others:
+                    result.append(ProductSerializer(p).data)
+
             else:
                 # Не пиджак+брюки — стандартное пересечение всех товаров группы
+                if len(products) == 1:
+                    result.append(ProductSerializer(products[0]).data)
+                    continue
                 size_maps = [
                     {s.size: s.stock for s in p.sizes.all() if s.stock > 0}
                     for p in products
@@ -220,6 +235,50 @@ class ProductViewSet(viewsets.ModelViewSet):
                 else:
                     for p in products:
                         result.append(ProductSerializer(p).data)
+
+        # ── Кросс-артикульный мердж: сопоставляем сирот-пиджаки ↔ сирот-брюки ──
+        # Если нормализованный артикул одного является суффиксом другого,
+        # значит это один костюм с разными артикулами в 1С (напр. "Grey 2" и "Oversize Grey2").
+        def _norm_art(a):
+            return a.lower().replace(' ', '')
+
+        used_j, used_p = set(), set()
+        for j_art, j_prods in orphan_jackets.items():
+            if j_art in used_j:
+                continue
+            nj = _norm_art(j_art)
+            for p_art, p_prods in orphan_pants.items():
+                if p_art in used_p:
+                    continue
+                np_ = _norm_art(p_art)
+                if nj == np_ or nj.endswith(np_) or np_.endswith(nj):
+                    used_j.add(j_art)
+                    used_p.add(p_art)
+                    # Попарный мердж 1:1
+                    pairs = list(zip(j_prods, p_prods))
+                    for j, pa in pairs:
+                        merged = merge_pair(j, [j, pa])
+                        if merged:
+                            result.append(merged)
+                        else:
+                            result.append(ProductSerializer(j).data)
+                            result.append(ProductSerializer(pa).data)
+                    # Непарные остатки
+                    for j in j_prods[len(pairs):]:
+                        result.append(ProductSerializer(j).data)
+                    for pa in p_prods[len(pairs):]:
+                        result.append(ProductSerializer(pa).data)
+                    break
+
+        # Добавляем оставшихся неспаренных сирот
+        for art, prods in orphan_jackets.items():
+            if art not in used_j:
+                for p in prods:
+                    result.append(ProductSerializer(p).data)
+        for art, prods in orphan_pants.items():
+            if art not in used_p:
+                for p in prods:
+                    result.append(ProductSerializer(p).data)
 
         return Response(result)
     

@@ -82,7 +82,7 @@ export default function HomePage() {
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10 transition-opacity duration-700 group-hover:from-black/90" />
                 <Image
-                  src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=1200&q=80"
+                  src="/classic.jpg"
                   alt="Classic Collection"
                   fill
                   unoptimized
@@ -111,7 +111,7 @@ export default function HomePage() {
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10 transition-opacity duration-700 group-hover:from-black/90" />
                 <Image
-                  src="https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1200&q=80"
+                  src="/casual.jpg"
                   alt="Casual Collection"
                   fill
                   unoptimized

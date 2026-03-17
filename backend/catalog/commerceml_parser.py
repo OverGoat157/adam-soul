@@ -121,6 +121,20 @@ def sync_products_from_tree(root, image_url_prefix=''):
                 logger.warning(f"Категория не найдена для товара {name}")
                 continue
 
+            # Oversize-товары из classic → casual категория «Casual костюмы»
+            if 'oversize' in name.lower() and category.collection == 'classic':
+                casual_cat, _ = Category.objects.get_or_create(
+                    slug='casual-kostyumy',
+                    defaults={
+                        'id_1c': f'{category.id_1c}_casual_oversize',
+                        'name': 'Casual костюмы',
+                        'collection': 'casual',
+                        'sort_order': category.sort_order,
+                        'is_active': True,
+                    },
+                )
+                category = casual_cat
+
             description_elem = prod.find(t('Описание'))
             description = (description_elem.text or '') if description_elem is not None else ''
 
