@@ -146,7 +146,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 for size in sorted(common, key=lambda x: int(x) if x.isdigit() else x)
             ]
             base['total_stock'] = sum(s['stock'] for s in base['sizes'])
-            base['price'] = str(max(p.price for p in pair_products))
+            base['price'] = str(sum(p.price for p in pair_products))
             imgs = make_images(pair_products)
             if imgs:
                 base['images'] = imgs
