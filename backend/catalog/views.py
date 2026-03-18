@@ -174,6 +174,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                 pants_by_variant = {get_variant_key(p.name, article): p for p in pants}
                 all_variants = set(jacket_by_variant) | set(pants_by_variant)
 
+                unmerged_jackets = []
+                unmerged_pants = []
+
                 for variant in sorted(all_variants):
                     j = jacket_by_variant.get(variant)
                     pa = pants_by_variant.get(variant)
@@ -183,11 +186,32 @@ class ProductViewSet(viewsets.ModelViewSet):
                         if merged:
                             result.append(merged)
                         else:
+                            unmerged_jackets.append(j)
+                            unmerged_pants.append(pa)
+                    elif j:
+                        unmerged_jackets.append(j)
+                    elif pa:
+                        unmerged_pants.append(pa)
+
+                # Fallback: если variant-ключи не совпали (напр. «Od\BB» vs «»),
+                # паруем оставшиеся пиджаки и брюки 1:1
+                if unmerged_jackets and unmerged_pants:
+                    pairs = list(zip(unmerged_jackets, unmerged_pants))
+                    for j, pa in pairs:
+                        merged = merge_pair(j, [j, pa])
+                        if merged:
+                            result.append(merged)
+                        else:
                             result.append(ProductSerializer(j).data)
                             result.append(ProductSerializer(pa).data)
-                    elif j:
+                    for j in unmerged_jackets[len(pairs):]:
                         result.append(ProductSerializer(j).data)
-                    elif pa:
+                    for pa in unmerged_pants[len(pairs):]:
+                        result.append(ProductSerializer(pa).data)
+                else:
+                    for j in unmerged_jackets:
+                        result.append(ProductSerializer(j).data)
+                    for pa in unmerged_pants:
                         result.append(ProductSerializer(pa).data)
 
                 for p in others:
