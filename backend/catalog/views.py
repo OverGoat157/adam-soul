@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser, AllowAny, IsAuthenticated
 from .models import Category, Product, ProductImage, SyncLog, Favorite
 from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, SyncLogSerializer
+from .size_grids import build_size_grids
 import logging
 
 logger = logging.getLogger(__name__)
@@ -70,7 +71,10 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         if not grouped_param:
             serializer = self.get_serializer(queryset, many=True)
-            return Response(serializer.data)
+            data = serializer.data
+            for item in data:
+                item['size_grids'] = build_size_grids(item.get('sizes', []))
+            return Response(data)
 
         from collections import defaultdict
 
@@ -304,8 +308,12 @@ class ProductViewSet(viewsets.ModelViewSet):
                 for p in prods:
                     result.append(ProductSerializer(p).data)
 
+        # ── Добавляем размерные сетки к каждому товару ──
+        for item in result:
+            item['size_grids'] = build_size_grids(item.get('sizes', []))
+
         return Response(result)
-    
+
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def add_image(self, request, pk=None):
         """Добавить дополнительное изображение"""

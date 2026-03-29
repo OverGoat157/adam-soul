@@ -18,6 +18,7 @@ export interface Product {
     size: string
     stock: number
   }>
+  size_grids?: string[]
   images: Array<{
     id: number
     image_url: string

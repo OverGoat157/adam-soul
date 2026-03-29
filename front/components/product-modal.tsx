@@ -4,7 +4,7 @@
 import React from "react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { X, ChevronLeft, ChevronRight, Check } from "lucide-react"
+import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Product } from "@/lib/api/products"
 import { ImageZoomModal } from "@/components/image-zoom-modal"
@@ -28,9 +28,7 @@ function formatPrice(price: number): string {
 
 export function ProductModal({ product, open, onOpenChange }: ProductModalProps) {
   const [selectedImage, setSelectedImage] = useState(0)
-  const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
 
   // Animation on open
@@ -50,9 +48,7 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
       if (zoomOpen) return
 
       if (e.key === "Escape") {
-        if (isDropdownOpen) {
-          setIsDropdownOpen(false)
-        } else if (open) {
+        if (open) {
           onOpenChange(false)
         }
       }
@@ -73,35 +69,15 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
       document.removeEventListener("keydown", handleKeyDown)
       document.body.style.overflow = ""
     }
-  }, [open, onOpenChange, selectedImage, product, zoomOpen, isDropdownOpen])
+  }, [open, onOpenChange, selectedImage, product, zoomOpen])
 
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       setSelectedImage(0)
-      setSelectedSize(null)
       setZoomOpen(false)
-      setIsDropdownOpen(false)
     }
   }, [open])
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('[data-dropdown]')) {
-        setIsDropdownOpen(false)
-      }
-    }
-
-    if (isDropdownOpen) {
-      document.addEventListener('click', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('click', handleClickOutside)
-    }
-  }, [isDropdownOpen])
 
   if (!product || !open) return null
 
@@ -260,67 +236,48 @@ export function ProductModal({ product, open, onOpenChange }: ProductModalProps)
                   {formatPrice(product.price)}
                 </p>
 
-                {/* Size Selector - Custom Premium Dropdown */}
-                {product.sizes && product.sizes.length > 0 && (
+                {/* Size Grids - Оптовое отображение размерных сеток */}
+                {product.size_grids && product.size_grids.length > 0 ? (
                   <div className="mb-6 sm:mb-10">
                     <p className="mb-3 sm:mb-4 text-[10px] sm:text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
-                      Размер
+                      Наличие размеров
                     </p>
-
-                    <div className="relative" data-dropdown>
-                      <button
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className={cn(
-                          "flex h-11 sm:h-14 w-full items-center justify-between bg-[#F8F8F8] px-4 sm:px-5 text-left transition-all duration-300",
-                          isDropdownOpen && "bg-[#F0F0F0]",
-                          selectedSize && "bg-white border border-black"
-                        )}
-                      >
-                        <span className={cn(
-                          "text-[15px]",
-                          selectedSize ? "text-[#1A1A1A] font-medium" : "text-[#999999]"
-                        )}>
-                          {selectedSize ? `Размер ${selectedSize}` : "Выберите размер"}
-                        </span>
-                        <ChevronRight className={cn(
-                          "h-5 w-5 text-[#999999] transition-transform duration-300",
-                          isDropdownOpen && "rotate-90"
-                        )} />
-                      </button>
-
-                      {/* Dropdown Menu */}
-                      <div className={cn(
-                        "absolute left-0 right-0 top-full z-20 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] transition-all duration-300 origin-top",
-                        isDropdownOpen
-                          ? "opacity-100 scale-y-100 translate-y-0"
-                          : "opacity-0 scale-y-95 -translate-y-2 pointer-events-none"
-                      )}>
-                        <div className="max-h-[280px] overflow-y-auto scrollbar-hide">
-                          {product.sizes.filter(s => s.stock > 0).map((sizeItem) => (
-                            <button
-                              key={sizeItem.size}
-                              onClick={() => {
-                                setSelectedSize(sizeItem.size)
-                                setIsDropdownOpen(false)
-                              }}
-                              className={cn(
-                                "flex w-full items-center justify-between px-5 py-4 text-left transition-colors duration-200 hover:bg-[#F8F8F8]",
-                                selectedSize === sizeItem.size && "bg-[#F8F8F8]"
-                              )}
-                            >
-                              <span className="text-[15px] font-medium text-[#1A1A1A]">
-                                {sizeItem.size}
-                              </span>
-                              {selectedSize === sizeItem.size && (
-                                <Check className="h-4 w-4 text-black" strokeWidth={2} />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      {product.size_grids.map((grid) => {
+                        const isRange = grid.includes('-')
+                        return (
+                          <span
+                            key={grid}
+                            className={cn(
+                              "inline-flex items-center px-3 py-2 text-[14px] font-medium transition-colors",
+                              isRange
+                                ? "bg-black text-white"
+                                : "bg-[#F0F0F0] text-[#1A1A1A]"
+                            )}
+                          >
+                            {grid}
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
-                )}
+                ) : product.sizes && product.sizes.filter(s => s.stock > 0).length > 0 ? (
+                  <div className="mb-6 sm:mb-10">
+                    <p className="mb-3 sm:mb-4 text-[10px] sm:text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
+                      Наличие размеров
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {product.sizes.filter(s => s.stock > 0).map((sizeItem) => (
+                        <span
+                          key={sizeItem.size}
+                          className="inline-flex items-center px-3 py-2 text-[14px] font-medium bg-[#F0F0F0] text-[#1A1A1A]"
+                        >
+                          {sizeItem.size}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Description */}
                 {product.description && (
