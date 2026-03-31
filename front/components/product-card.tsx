@@ -65,6 +65,25 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
             minimumFractionDigits: 0,
           }).format(product.price)}
         </p>
+
+        {/* Size Grids */}
+        {product.size_grids && product.size_grids.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {product.size_grids.map((grid) => (
+              <span
+                key={grid}
+                className={cn(
+                  "inline-block px-1.5 py-0.5 text-[11px] font-medium",
+                  grid.includes('-')
+                    ? "bg-black text-white"
+                    : "bg-[#F0F0F0] text-[#666]"
+                )}
+              >
+                {grid}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
