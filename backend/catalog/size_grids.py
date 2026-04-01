@@ -7,10 +7,11 @@
   - zidan:   с ростом /194  (артикулы с «Zidan»)
 
 Для каждой группы:
-  1. Проверяем предопределённые сетки (44-58, 46-58, 48-58, …)
-  2. Строим фактические непрерывные диапазоны из наличия
-  3. Добавляем одиночные размеры
-  4. Сортируем: длинные сетки → короткие → одиночные
+  1. Правило «по 1 шт.»: если ВСЕ размеры группы = 1 шт. и точно
+     совпадают с предопределённой сеткой → показываем только эту сетку.
+  2. Иначе: предопределённые сетки + фактические непрерывные диапазоны
+     + предопределённые одиночные размеры.
+  3. Сортировка: длинные сетки → короткие → одиночные.
 """
 
 from collections import defaultdict
@@ -18,9 +19,16 @@ from collections import defaultdict
 
 # ── Предопределённые сетки ────────────────────────────────────────
 PREDEFINED_GRIDS = {
-    'regular': [(44, 58), (46, 58), (48, 58), (44, 46)],
+    'regular': [(44, 58), (46, 58), (48, 58), (48, 52), (44, 46)],
     'big':     [(60, 66), (60, 62)],
     'zidan':   [(48, 58), (48, 54), (52, 54)],
+}
+
+# Предопределённые одиночные размеры (показываются если есть в наличии)
+PREDEFINED_INDIVIDUALS = {
+    'regular': [44, 46, 48, 50, 56],
+    'big':     [62],
+    'zidan':   [],
 }
 
 SIZE_STEP = 2  # шаг размерного ряда
@@ -49,7 +57,6 @@ def _parse_size(size_str):
             if not base_str.isdigit():
                 return None
             base = int(base_str)
-            # 194 в части роста → zidan
             if '194' in height:
                 return (base, 'zidan')
             return (base, 'big' if base >= 60 else 'regular')
@@ -93,44 +100,61 @@ def build_size_grids(sizes_list):
     Принимает список {'size': str, 'stock': int}.
     Возвращает список строк-сеток, отсортированных по приоритету.
 
-    Пример вывода: ['44-58', '48-58', '46-58', '44-46', '46', '48', '50', '56']
+    Пример: ['44-58', '48-58', '48-52', '44-46', '44', '46', '48', '50', '56']
     """
-    # 1. Парсим и группируем
-    groups = defaultdict(set)
+    # 1. Парсим и группируем с учётом остатков
+    groups = defaultdict(dict)  # group -> {base_size: total_stock}
     for s in sizes_list:
         if s.get('stock', 0) <= 0:
             continue
         parsed = _parse_size(s['size'])
         if parsed:
             base, group = parsed
-            groups[group].add(base)
+            groups[group][base] = groups[group].get(base, 0) + s['stock']
 
-    # (range_length, start_size, label) — для сортировки
-    entries = []
+    entries = []  # (range_length, start_size, label)
 
     for group_name in ('regular', 'big', 'zidan'):
-        base_sizes = sorted(groups.get(group_name, set()))
-        if not base_sizes:
+        size_stocks = groups.get(group_name, {})
+        if not size_stocks:
             continue
 
+        base_sizes = sorted(size_stocks.keys())
         suffix = '/194' if group_name == 'zidan' else ''
+        predefined = PREDEFINED_GRIDS.get(group_name, [])
+
+        # ── Правило «по 1 шт.» ──
+        # Если ВСЕ размеры имеют stock=1 И точно совпадают
+        # с одной из предопределённых сеток → только эта сетка.
+        if all(stock == 1 for stock in size_stocks.values()):
+            base_set = set(base_sizes)
+            found_single = False
+            for start, end in sorted(predefined, key=lambda x: x[1] - x[0], reverse=True):
+                grid_set = set(range(start, end + 1, SIZE_STEP))
+                if grid_set == base_set:
+                    entries.append((len(grid_set), start, f'{start}-{end}{suffix}'))
+                    found_single = True
+                    break
+            if found_single:
+                continue
+
+        # ── Обычная логика ──
 
         # 2a. Предопределённые сетки
-        for start, end in PREDEFINED_GRIDS.get(group_name, []):
+        for start, end in predefined:
             grid = list(range(start, end + 1, SIZE_STEP))
             if all(s in base_sizes for s in grid):
-                label = f'{start}-{end}{suffix}'
-                entries.append((len(grid), start, label))
+                entries.append((len(grid), start, f'{start}-{end}{suffix}'))
 
         # 2b. Фактические непрерывные диапазоны (≥2 размера)
         for rng in _continuous_ranges(base_sizes):
             if len(rng) >= 2:
-                label = f'{rng[0]}-{rng[-1]}{suffix}'
-                entries.append((len(rng), rng[0], label))
+                entries.append((len(rng), rng[0], f'{rng[0]}-{rng[-1]}{suffix}'))
 
-        # 2c. Одиночные размеры
-        for s in base_sizes:
-            entries.append((1, s, f'{s}{suffix}'))
+        # 2c. Предопределённые одиночные размеры
+        for s in PREDEFINED_INDIVIDUALS.get(group_name, []):
+            if s in size_stocks:
+                entries.append((1, s, f'{s}{suffix}'))
 
     # 3. Сортировка: длинные сетки первыми, потом по начальному размеру
     entries.sort(key=lambda x: (-x[0], x[1]))
