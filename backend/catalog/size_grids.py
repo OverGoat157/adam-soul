@@ -147,13 +147,21 @@ def build_size_grids(sizes_list):
                 entries.append((len(grid), start, f'{start}-{end}{suffix}'))
 
         # 2b. Фактические непрерывные диапазоны (≥2 размера)
+        has_ranges = False
         for rng in _continuous_ranges(base_sizes):
             if len(rng) >= 2:
                 entries.append((len(rng), rng[0], f'{rng[0]}-{rng[-1]}{suffix}'))
+                has_ranges = True
 
-        # 2c. Предопределённые одиночные размеры
-        for s in PREDEFINED_INDIVIDUALS.get(group_name, []):
-            if s in size_stocks:
+        # 2c. Одиночные размеры
+        if has_ranges:
+            # Есть сетки → показываем только предопределённые одиночные
+            for s in PREDEFINED_INDIVIDUALS.get(group_name, []):
+                if s in size_stocks:
+                    entries.append((1, s, f'{s}{suffix}'))
+        else:
+            # Нет сеток → показываем ВСЕ доступные размеры
+            for s in base_sizes:
                 entries.append((1, s, f'{s}{suffix}'))
 
     # 3. Сортировка: длинные сетки первыми, потом по начальному размеру
