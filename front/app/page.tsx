@@ -86,7 +86,7 @@ export default function HomePage() {
                   alt="Classic Collection"
                   fill
                   unoptimized
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="object-cover object-top md:object-center transition-transform duration-700 group-hover:scale-110"
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority
                 />
@@ -115,7 +115,7 @@ export default function HomePage() {
                   alt="Casual Collection"
                   fill
                   unoptimized
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="object-cover object-top md:object-center transition-transform duration-700 group-hover:scale-110"
                   sizes="(max-width: 768px) 100vw, 50vw"
                   priority
                 />
