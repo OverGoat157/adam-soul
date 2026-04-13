@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Header } from "@/components/header"
 import {
   getAllProducts,
-  addProductImage,
+  uploadProductImage,
   reorderImages,
   deleteProductImage,
   deleteProduct,
@@ -38,7 +38,7 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [activeTab, setActiveTab] = useState<"all" | "out_of_stock">("all")
   const [productImages, setProductImages] = useState<Array<{id: number; image_url: string}>>([])
-  const [newImageUrl, setNewImageUrl] = useState("")
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
@@ -254,21 +254,23 @@ export default function AdminPage() {
     return matchesSearch && matchesTab
   })
 
-  const handleAddImage = async () => {
-    if (!newImageUrl.trim() || !selectedProduct) return
-
+  const handleUploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !selectedProduct) return
+    setIsUploadingImage(true)
     try {
       const token = localStorage.getItem('admin_token') || ''
-      await addProductImage(selectedProduct.id, newImageUrl.trim(), token)
-      await loadProducts()
-      
-      const updated = products.find(p => p.id === selectedProduct.id)
+      for (const file of Array.from(files)) {
+        await uploadProductImage(selectedProduct.id, file, token)
+      }
+      const updatedProducts = await getAllProducts(token)
+      setProducts(updatedProducts)
+      const updated = updatedProducts.find(p => p.id === selectedProduct.id)
       if (updated) setSelectedProduct(updated)
-      
-      setNewImageUrl("")
-    } catch (error) {
-      console.error('Add image error:', error)
-      alert('Ошибка добавления изображения')
+    } catch (error: any) {
+      console.error('Upload image error:', error)
+      alert(error?.message || 'Ошибка загрузки изображения')
+    } finally {
+      setIsUploadingImage(false)
     }
   }
 
@@ -772,25 +774,32 @@ export default function AdminPage() {
                   <p className="mb-3 md:mb-4 text-[10px] md:text-[11px] font-medium uppercase tracking-[3px] text-[#999999]">
                     Добавить изображение
                   </p>
-                  <div className="flex gap-2 md:gap-3">
+
+                  <label
+                    className={cn(
+                      "flex h-12 md:h-14 items-center justify-center gap-2 md:gap-3 bg-black text-white cursor-pointer transition-all duration-300 hover:bg-[#333333]",
+                      isUploadingImage && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <Upload className="h-4 w-4 md:h-5 md:w-5" />
+                    <span className="text-[12px] md:text-[13px] font-medium uppercase tracking-wide">
+                      {isUploadingImage ? "Загрузка..." : "Выбрать файлы с устройства"}
+                    </span>
                     <input
-                      type="text"
-                      placeholder="URL изображения..."
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddImage()}
-                      className="h-10 md:h-12 flex-1 bg-[#F8F8F8] px-3 md:px-4 text-[13px] md:text-[14px] text-[#1A1A1A] placeholder:text-[#999999] outline-none transition-colors focus:bg-[#F0F0F0]"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      disabled={isUploadingImage}
+                      onChange={(e) => {
+                        handleUploadFiles(e.target.files)
+                        e.target.value = ""
+                      }}
+                      className="hidden"
                     />
-                    <button
-                      onClick={handleAddImage}
-                      disabled={!newImageUrl.trim()}
-                      className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center bg-black text-white transition-all duration-300 hover:bg-[#333333] disabled:cursor-not-allowed disabled:opacity-50 flex-shrink-0"
-                    >
-                      <Plus className="h-4 w-4 md:h-5 md:w-5" />
-                    </button>
-                  </div>
+                  </label>
+
                   <p className="mt-2 md:mt-3 text-[11px] md:text-[12px] text-[#999999]">
-                    Вставьте URL изображения из 1С или загрузите файл
+                    JPG, PNG или WebP, до 10 МБ. Можно выбрать несколько файлов сразу.
                   </p>
                 </div>
 

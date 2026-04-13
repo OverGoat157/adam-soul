@@ -15,9 +15,23 @@ class ProductSizeSerializer(serializers.ModelSerializer):
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductImage
         fields = ['id', 'image_url', 'is_from_1c', 'sort_order']
+
+    def get_image_url(self, obj):
+        if obj.image:
+            from django.conf import settings
+            request = self.context.get('request')
+            url = obj.image.url
+            if request:
+                return request.build_absolute_uri(url)
+            if settings.SITE_URL:
+                return f"{settings.SITE_URL.rstrip('/')}{url}"
+            return url
+        return obj.image_url
 
 
 class ProductSerializer(serializers.ModelSerializer):

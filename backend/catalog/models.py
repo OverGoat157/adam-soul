@@ -57,12 +57,18 @@ class Product(models.Model):
 class ProductImage(models.Model):
     """Дополнительные изображения товара"""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='images')
-    image_url = models.URLField(max_length=1000)
+    image_url = models.URLField(max_length=1000, blank=True)
+    image = models.ImageField(upload_to='products/', blank=True, null=True, verbose_name="Файл изображения")
     is_from_1c = models.BooleanField(default=True, verbose_name="Из 1С")
     sort_order = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['sort_order']
+
+    def delete(self, *args, **kwargs):
+        if self.image:
+            self.image.delete(save=False)
+        super().delete(*args, **kwargs)
 
 
 class ProductSize(models.Model):

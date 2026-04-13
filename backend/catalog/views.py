@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAdminUser, AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Category, Product, ProductImage, SyncLog, Favorite
 from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, SyncLogSerializer
 from .size_grids import build_size_grids
@@ -314,25 +315,39 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return Response(result)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser], parser_classes=[MultiPartParser, FormParser, JSONParser])
     def add_image(self, request, pk=None):
-        """Добавить дополнительное изображение"""
+        """Добавить изображение — файл (multipart) или URL (json)"""
         product = self.get_object()
-        image_url = request.data.get('image_url')
-        
-        if not image_url:
-            return Response({'error': 'image_url required'}, status=400)
-        
         max_order = ProductImage.objects.filter(product=product).count()
-        
-        ProductImage.objects.create(
-            product=product,
-            image_url=image_url,
-            is_from_1c=False,
-            sort_order=max_order
-        )
-        
-        return Response({'status': 'success'})
+
+        uploaded_file = request.FILES.get('image')
+        image_url = request.data.get('image_url')
+
+        if uploaded_file:
+            max_size = 10 * 1024 * 1024
+            if uploaded_file.size > max_size:
+                return Response({'error': 'Файл больше 10 МБ'}, status=400)
+            allowed_types = ('image/jpeg', 'image/png', 'image/webp')
+            if uploaded_file.content_type not in allowed_types:
+                return Response({'error': 'Допустимые форматы: JPG, PNG, WebP'}, status=400)
+            img = ProductImage.objects.create(
+                product=product,
+                image=uploaded_file,
+                is_from_1c=False,
+                sort_order=max_order,
+            )
+        elif image_url:
+            img = ProductImage.objects.create(
+                product=product,
+                image_url=image_url,
+                is_from_1c=False,
+                sort_order=max_order,
+            )
+        else:
+            return Response({'error': 'image or image_url required'}, status=400)
+
+        return Response(ProductImageSerializer(img, context={'request': request}).data)
     
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def reorder_images(self, request, pk=None):

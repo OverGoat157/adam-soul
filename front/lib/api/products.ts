@@ -130,7 +130,7 @@ export async function getAllProducts(token: string, onlyOutOfStock = false): Pro
   }
 }
 
-// ADMIN: Добавить изображение
+// ADMIN: Добавить изображение по URL
 export async function addProductImage(
   productId: number,
   imageUrl: string,
@@ -145,6 +145,27 @@ export async function addProductImage(
     body: JSON.stringify({ image_url: imageUrl })
   })
   if (!res.ok) throw new Error('Failed to add image')
+}
+
+// ADMIN: Загрузить изображение файлом
+export async function uploadProductImage(
+  productId: number,
+  file: File,
+  token: string
+): Promise<void> {
+  const formData = new FormData()
+  formData.append('image', file)
+  const res = await fetch(`${API_URL}/products/${productId}/add_image`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Token ${token}`
+    },
+    body: formData
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Failed to upload image')
+  }
 }
 
 // ADMIN: Изменить порядок изображений
