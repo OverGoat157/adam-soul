@@ -24,12 +24,12 @@ class ProductImageSerializer(serializers.ModelSerializer):
     def get_image_url(self, obj):
         if obj.image:
             from django.conf import settings
-            request = self.context.get('request')
             url = obj.image.url
-            if request:
-                return request.build_absolute_uri(url)
             if settings.SITE_URL:
                 return f"{settings.SITE_URL.rstrip('/')}{url}"
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(url)
             return url
         return obj.image_url
 
