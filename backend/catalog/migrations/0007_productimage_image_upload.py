@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('catalog', '0004_category_collection_favorite'),
+        ('catalog', '0006_merge_0004_category_collection_favorite_0005_favorite'),
     ]
 
     operations = [
