@@ -95,17 +95,26 @@ class ProductViewSet(viewsets.ModelViewSet):
             return ''
 
         def make_images(product_list):
+            from django.conf import settings as conf_settings
             all_images, seen = [], set()
             for p in product_list:
                 for img in p.images.all():
-                    if img.image_url and img.image_url not in seen:
+                    if img.image:
+                        url = img.image.url
+                        if conf_settings.SITE_URL:
+                            url = f"{conf_settings.SITE_URL.rstrip('/')}{url}"
+                    elif img.image_url:
+                        url = img.image_url
+                    else:
+                        continue
+                    if url not in seen:
                         all_images.append({
                             'id': img.id,
-                            'image_url': img.image_url,
+                            'image_url': url,
                             'is_from_1c': img.is_from_1c,
                             'sort_order': img.sort_order,
                         })
-                        seen.add(img.image_url)
+                        seen.add(url)
             return all_images
 
         def normalize_size(size_str):
